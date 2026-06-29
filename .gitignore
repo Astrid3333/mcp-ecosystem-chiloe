@@ -1,0 +1,9 @@
+claude_desktop_config.json
+.env
+*.env
+bolsa-env/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+*.log
