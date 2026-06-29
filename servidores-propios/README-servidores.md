@@ -41,3 +41,10 @@
 - Ubicación: ~/bolsa-mcp/ | Virtualenv: ~/bolsa-env/ | Lenguaje: Python 3
 - Análisis bursátil — usado en tesis inversión plataformas fungales (rFC, quitosano, beta-glucanos)
 - Replicar: python -m venv ~/bolsa-env && ~/bolsa-env/bin/pip install -r ~/bolsa-mcp/requirements.txt
+
+## contabilidad-mcp
+- Ubicación: ~/contabilidad-mcp/ | Lenguaje: Python 3 (FastMCP)
+- Contabilidad de partida doble (double-entry) genérica e internacional
+- Cuentas, asientos, libro mayor, P&L, balance general, IVA, exportación QIF
+- Repo: https://github.com/Astrid3333/contabilidad-mcp
+- Replicar: cd ~/contabilidad-mcp && pip install fastmcp
