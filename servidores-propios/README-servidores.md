@@ -18,6 +18,15 @@
 - Usado en TritOS y visualizaciones Blender
 - Replicar: sudo apt install octave
 
+## gazebo-mcp
+- Ubicación: ~/gazebo-mcp/ (gazebo_core.py + gazebo_entities.py) | Lenguaje: Python 3 (FastMCP)
+- Control de simulaciones Gazebo Harmonic desde Claude Desktop vía CLI `gz`
+- gazebo_core: versión de Gazebo, lanzar/detener simulaciones (mundos .sdf, modo headless)
+- gazebo_entities: listar entidades/modelos, manejo de sensores, conversión Euler↔cuaternión (orientación de cuerpos rígidos)
+- Uso: simulación física para prótesis (transtibial canina / transradial humana)
+- Dependencias: gz (Gazebo Harmonic), fastmcp (pip install fastmcp)
+- Replicar: cd ~/gazebo-mcp && pip install fastmcp
+
 ## krita-mcp
 - Ubicación: ~/krita-mcp/ | Lenguaje: Python 3
 - Control de Krita para pintura digital y diseño gráfico desde Claude

@@ -9,6 +9,7 @@ Ecosistema completo de servidores MCP configurado en Claude Desktop para Linux M
 | krita | 🔨 Propio | Control de Krita (pintura digital) |
 | octave | 🔨 Propio | Cálculo numérico con GNU Octave |
 | bolsa-mcp | 🔨 Propio | Servidor de datos bursátiles |
+| gazebo | 🔨 Propio | Simulación física Gazebo Harmonic (prótesis) |
 | blender | 📦 Tercero | Blender 3D via uvx |
 | freecad | 📦 Tercero | FreeCAD via script local |
 | qgis | 📦 Tercero | QGIS — análisis geoespacial |
