@@ -229,9 +229,6 @@ def gz_status() -> str:
     return f"{estado}\nTopics activos: {n_topics}"
 
 
-if __name__ == "__main__":
-    mcp.run()
-
 
 @mcp.tool()
 def gz_set_pose(model_name: str, x: float, y: float, z: float,
@@ -314,3 +311,7 @@ def gz_spawn_fuel_model(model_name: str, fuel_uri: str,
                 "--timeout", "5000",
                 "--req", req])
     return r.get("stdout") or r.get("stderr") or r.get("error", "")
+
+
+if __name__ == "__main__":
+    mcp.run()

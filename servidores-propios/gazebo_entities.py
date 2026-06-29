@@ -4,6 +4,7 @@ Gazebo Entities MCP Server
 Manejo de entidades, modelos y sensores en Gazebo
 """
 import subprocess
+import math
 import os
 from fastmcp import FastMCP
 
@@ -25,6 +26,22 @@ def run_gz(args: list, timeout: int = 10) -> dict:
         return {"ok": False, "error": f"Timeout después de {timeout}s"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> dict:
+    """
+    Convierte ángulos de Euler (radianes) a cuaternión (x, y, z, w).
+    Convención ZYX (yaw, pitch, roll).
+    """
+    cr = math.cos(roll / 2); sr = math.sin(roll / 2)
+    cp = math.cos(pitch / 2); sp = math.sin(pitch / 2)
+    cy = math.cos(yaw / 2);  sy = math.sin(yaw / 2)
+    return {
+        "x": sr * cp * cy - cr * sp * sy,
+        "y": cr * sp * cy + sr * cp * sy,
+        "z": cr * cp * sy - sr * sp * cy,
+        "w": cr * cp * cy + sr * sp * sy,
+    }
 
 
 @mcp.tool()
@@ -98,7 +115,14 @@ def gz_set_pose(model_name: str, x: float, y: float, z: float,
     x, y, z: posición en metros
     roll, pitch, yaw: orientación en radianes
     """
-    req = f'entity: {{name: "{model_name}" type: MODEL}} pose: {{position: {{x: {x} y: {y} z: {z}}} orientation: {{x: 0 y: 0 z: 0 w: 1}}}}'
+    q = euler_to_quaternion(roll, pitch, yaw)
+    req = (
+        f'entity: {{name: "{model_name}" type: MODEL}} '
+        f'pose: {{'
+        f'position: {{x: {x} y: {y} z: {z}}} '
+        f'orientation: {{x: {q["x"]:.6f} y: {q["y"]:.6f} z: {q["z"]:.6f} w: {q["w"]:.6f}}}'
+        f'}}'
+    )
     r = run_gz(["service", "-s", "/world/default/set_pose",
                 "--reqtype", "gz.msgs.Pose",
                 "--reptype", "gz.msgs.Boolean",
