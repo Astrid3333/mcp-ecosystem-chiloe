@@ -39,22 +39,35 @@ def gz_list_entities() -> str:
 
 @mcp.tool()
 def gz_spawn_model(model_name: str, model_type: str = "box",
-                   x: float = 0.0, y: float = 0.0, z: float = 1.0) -> str:
+                   x: float = 0.0, y: float = 0.0, z: float = 1.0,
+                   size: float = 1.0, radius: float = 0.5, length: float = 1.0) -> str:
     """
     Inserta un modelo en la simulación.
     model_type: box, sphere, cylinder
     x, y, z: posición inicial
+    size: longitud de arista para box
+    radius: radio para sphere/cylinder
+    length: altura para cylinder
     """
+    if model_type == "box":
+        geometry = f"<box><size>{size} {size} {size}</size></box>"
+    elif model_type == "sphere":
+        geometry = f"<sphere><radius>{radius}</radius></sphere>"
+    elif model_type == "cylinder":
+        geometry = f"<cylinder><radius>{radius}</radius><length>{length}</length></cylinder>"
+    else:
+        return f"Error: model_type '{model_type}' no soportado (usar box, sphere o cylinder)"
+
     sdf = f"""<?xml version="1.0" ?>
 <sdf version="1.8">
   <model name="{model_name}">
     <pose>{x} {y} {z} 0 0 0</pose>
     <link name="link">
       <collision name="col">
-        <geometry><{model_type}><size>1 1 1</size></{model_type}></geometry>
+        <geometry>{geometry}</geometry>
       </collision>
       <visual name="vis">
-        <geometry><{model_type}><size>1 1 1</size></{model_type}></geometry>
+        <geometry>{geometry}</geometry>
       </visual>
     </link>
   </model>
