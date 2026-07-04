@@ -48,3 +48,16 @@
 - Cuentas, asientos, libro mayor, P&L, balance general, IVA, exportación QIF
 - Repo: https://github.com/Astrid3333/contabilidad-mcp
 - Replicar: cd ~/contabilidad-mcp && pip install fastmcp
+
+## neuron-mcp
+- Ubicación: ~/neuron-mcp/ (servidores-propios/neuron_mcp.py) | Lenguaje: Python 3 (FastMCP + NEURON/HOC)
+- Simulación de neuronas biofísicas: secciones (soma/dendrita/axón), canales Hodgkin-Huxley y pasivos, current clamp, registro de potencial de membrana
+- Dependencias: neuron, numpy, mcp (pip)
+- Replicar: python3 -m venv ~/neuron-env && source ~/neuron-env/bin/activate && pip install mcp neuron numpy
+
+
+## brian2-mcp
+- Ubicación: ~/brian2-mcp/ (servidores-propios/brian2_mcp.py) | Lenguaje: Python 3 (FastMCP + Brian2)
+- Redes de neuronas spiking: grupos con modelo configurable, sinapsis, monitores de spikes y de estado, corrida de red completa
+- Dependencias: brian2, numpy, mcp (pip)
+- Replicar: python3 -m venv ~/brian2-env && source ~/brian2-env/bin/activate && pip install mcp brian2 numpy

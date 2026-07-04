@@ -11,6 +11,8 @@ Ecosistema completo de servidores MCP configurado en Claude Desktop para Linux M
 | bolsa-mcp | 🔨 Propio | Servidor de datos bursátiles |
 | gazebo | 🔨 Propio | Simulación física Gazebo Harmonic (prótesis) |
 | contabilidad | 🔨 Propio | Contabilidad de partida doble — SQLite, QIF |
+| neuron-mcp | 🔨 Propio | Simulación de neuronas biofísicas (NEURON, Hodgkin-Huxley) |
+| brian2-mcp | 🔨 Propio | Redes de neuronas spiking (Brian2) |
 | blender | 📦 Tercero | Blender 3D via uvx |
 | freecad | 📦 Tercero | FreeCAD via script local |
 | qgis | 📦 Tercero | QGIS — análisis geoespacial |
