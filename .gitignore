@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+md_mcp_runs/
+*.tpr
+*.trr
+*.xtc
+*.edr
+*.log

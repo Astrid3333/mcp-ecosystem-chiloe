@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "md-simulation": {
+      "command": "/ruta/absoluta/a/md-mcp-server/.venv/bin/python",
+      "args": ["/ruta/absoluta/a/md-mcp-server/server.py"]
+    }
+  }
+}
