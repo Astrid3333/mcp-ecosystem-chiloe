@@ -61,3 +61,9 @@
 - Redes de neuronas spiking: grupos con modelo configurable, sinapsis, monitores de spikes y de estado, corrida de red completa
 - Dependencias: brian2, numpy, mcp (pip)
 - Replicar: python3 -m venv ~/brian2-env && source ~/brian2-env/bin/activate && pip install mcp brian2 numpy
+
+## biosim-mcp
+- Ubicación: ~/biosim-mcp/ (repo propio, github.com/Astrid3333/biosim-mcp) | Lenguaje: Python 3 (FastMCP + COPASI)
+- Simulación de sistemas bioquímicos: carga de modelos COPASI/SBML, resumen del modelo, time course, estado estacionario, análisis de sensibilidad, edición de parámetros
+- Dependencias: COPASI (compilado desde fuente), python-copasi bindings, mcp (pip)
+- Replicar: ver build de COPASI en notas propias (bison 3.x / raptor RDF)
