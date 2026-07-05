@@ -15,6 +15,10 @@ Ecosistema completo de servidores MCP configurado en Claude Desktop para Linux M
 | brian2-mcp | 🔨 Propio | Redes de neuronas spiking (Brian2) |
 | biosim-mcp | 🔨 Propio | Simulación bioquímica (COPASI: steady state, sensibilidad) |
 | psyche-mcp | 🔨 Propio | Psicometría IRT (calibración, scoring, tests adaptativos, EFA) |
+| physics-mcp | 🔨 Propio | Física y microfísica (mecánica, EM, Schrödinger 1D, relatividad) |
+| microbio-mcp | 🔨 Propio | Virología y bacteriología (crecimiento bacteriano, SIR/SEIR, infección viral) |
+| physics-mcp | 🔨 Propio | Física y microfísica (mecánica, EM, Schrödinger 1D, relatividad) |
+| microbio-mcp | 🔨 Propio | Virología y bacteriología (crecimiento bacteriano, SIR/SEIR, infección viral) |
 | blender | 📦 Tercero | Blender 3D via uvx |
 | freecad | 📦 Tercero | FreeCAD via script local |
 | qgis | 📦 Tercero | QGIS — análisis geoespacial |

@@ -72,3 +72,13 @@
 - Ubicación: ~/psyche-mcp/ | Lenguaje: Python 3 (FastMCP + girth + factor_analyzer)
 - Psicometría IRT: creación de bancos de ítems, curva de información de Fisher, calibración (2PL/3PL via MML), scoring de respondentes por máxima verosimilitud, simulación de test adaptativo (CAT), validación de estructura factorial (EFA)
 - Dependencias: mcp, numpy, scipy, girth, factor-analyzer, pandas (venv propio en ~/psyche-env)
+
+## physics-mcp
+- Ubicación: ~/physics-mcp/ | Lenguaje: Python 3 (FastMCP + numpy/scipy)
+- Física clásica y microfísica: osciladores amortiguados, sistemas N-cuerpos, campos eléctricos/magnéticos (Coulomb, Biot-Savart), ecuación de Schrödinger 1D (pozo/oscilador armónico), tunelamiento cuántico, decaimiento de partículas, cinemática relativista
+- Dependencias: mcp, numpy, scipy (venv propio en ~/physics-env)
+
+## microbio-mcp
+- Ubicación: ~/microbio-mcp/ | Lenguaje: Python 3 (FastMCP + numpy/scipy)
+- Virología y bacteriología: ajuste y simulación de curvas de crecimiento bacteriano (logística/Gompertz), modelos epidemiológicos SIR/SEIR, estimación de R0, dinámica de infección viral intracelular
+- Dependencias: mcp, numpy, scipy (venv propio en ~/microbio-env)
