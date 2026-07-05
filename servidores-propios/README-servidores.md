@@ -67,3 +67,8 @@
 - Simulación de sistemas bioquímicos: carga de modelos COPASI/SBML, resumen del modelo, time course, estado estacionario, análisis de sensibilidad, edición de parámetros
 - Dependencias: COPASI (compilado desde fuente), python-copasi bindings, mcp (pip)
 - Replicar: ver build de COPASI en notas propias (bison 3.x / raptor RDF)
+
+## psyche-mcp
+- Ubicación: ~/psyche-mcp/ | Lenguaje: Python 3 (FastMCP + girth + factor_analyzer)
+- Psicometría IRT: creación de bancos de ítems, curva de información de Fisher, calibración (2PL/3PL via MML), scoring de respondentes por máxima verosimilitud, simulación de test adaptativo (CAT), validación de estructura factorial (EFA)
+- Dependencias: mcp, numpy, scipy, girth, factor-analyzer, pandas (venv propio en ~/psyche-env)
