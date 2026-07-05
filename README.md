@@ -14,8 +14,6 @@ Ecosistema completo de servidores MCP configurado en Claude Desktop para Linux M
 | neuron-mcp | 🔨 Propio | Simulación de neuronas biofísicas (NEURON, Hodgkin-Huxley) |
 | brian2-mcp | 🔨 Propio | Redes de neuronas spiking (Brian2) |
 | biosim-mcp | 🔨 Propio | Simulación bioquímica (COPASI: steady state, sensibilidad) |
-| biosim-mcp | 🔨 Propio | Simulación bioquímica (COPASI: steady state, sensibilidad) |
-| biosim-mcp | 🔨 Propio | Simulación bioquímica (COPASI: steady state, sensibilidad) |
 | blender | 📦 Tercero | Blender 3D via uvx |
 | freecad | 📦 Tercero | FreeCAD via script local |
 | qgis | 📦 Tercero | QGIS — análisis geoespacial |
