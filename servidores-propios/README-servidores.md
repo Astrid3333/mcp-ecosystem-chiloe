@@ -67,6 +67,17 @@
 - Simulación de sistemas bioquímicos: carga de modelos COPASI/SBML, resumen del modelo, time course, estado estacionario, análisis de sensibilidad, edición de parámetros
 - Dependencias: COPASI (compilado desde fuente), python-copasi bindings, mcp (pip)
 - Replicar: ver build de COPASI en notas propias (bison 3.x / raptor RDF)
+- Nota: en el config real corre sobre el venv `~/basico-env` (no `~/biosim-env` como sugeriría el nombre) — revisar si conviene renombrar el venv o si es intencional.
+
+## openbb-mcp
+- Ubicación: paquete de terceros, instalado vía `uvx` (no vive en este repo) | Lenguaje: Python 3
+- Servidor MCP oficial de OpenBB — acceso a datos financieros/económicos (usado en análisis de multiplicador keynesiano y dinámica extractivista chilena)
+- Replicar: `uvx --from openbb-mcp-server --with openbb openbb-mcp --transport stdio`
+- Nota: encontrado en el config real de Claude Desktop pero no estaba documentado acá — agregado para que no se vuelva a perder.
+
+## sbtcvm
+- Ubicación: servidores-propios/sbtcvm_mcp_server.py (FastMCP server name: `sbtcvm`) | Lenguaje: Python 3 (FastMCP)
+- **Pendiente de documentar**: existe en este repo pero no está en el config real ni descrito en ningún README. Completar qué hace y su ubicación de despliegue (~/sbtcvm-mcp/ asumido, sin confirmar).
 
 ## psyche-mcp
 - Ubicación: ~/psyche-mcp/ | Lenguaje: Python 3 (FastMCP + girth + factor_analyzer)
