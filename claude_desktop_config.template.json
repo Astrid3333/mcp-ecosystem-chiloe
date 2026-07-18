@@ -1,25 +1,153 @@
 {
   "mcpServers": {
-    "mcp-registry": { "command": "/home/astrid/.local/bin/mcp-registry", "args": ["serve"] },
-    "blender": { "command": "/home/astrid/.local/bin/blender-mcp", "env": { "BLENDER_HOST": "localhost", "BLENDER_PORT": "9876" } },
-    "freecad": { "command": "uvx", "args": ["freecad-mcp"] },
-    "solvespace": { "command": "node", "args": ["/home/astrid/solvespace-mcp/src/index.js"], "env": { "SOLVESPACE_CLI": "/usr/bin/solvespace-cli", "SOLVESPACE_WORKDIR": "/home/astrid/solvespace-projects" } },
-    "qgis": { "command": "/bin/bash", "args": ["-c", "/home/astrid/.local/bin/uvx --from git+https://github.com/nkarasiak/qgis-mcp qgis-mcp"] },
-    "gdal": { "command": "/bin/bash", "args": ["-c", "/home/astrid/.local/bin/uvx --from gdal-mcp gdal"] },
-    "inkscape": { "command": "bash", "args": ["-c", "source /home/astrid/.config/inkscape/extensions/inkmcp/inkmcp/venv/bin/activate && python -m inkmcp"] },
-    "krita": { "command": "python3", "args": ["/home/astrid/krita-mcp/server.py"] },
-    "materials-project": { "command": "/home/astrid/.venv/mcp/bin/mcp-materials-project", "env": { "MP_API_KEY": "TU_MP_API_KEY_AQUI" } },
-    "analisis-suelos": { "command": "python3", "args": ["/home/astrid/mcp_suelos/server.py"] },
-    "filesystem": { "command": "/bin/bash", "args": ["-c", "/home/astrid/.nvm/versions/node/v20.20.1/bin/npx -y @modelcontextprotocol/server-filesystem /home/astrid"] },
-    "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] },
-    "firecrawl-mcp": { "command": "/home/astrid/.nvm/versions/node/v22.22.3/bin/npx", "args": ["-y", "firecrawl-mcp"], "env": { "FIRECRAWL_API_KEY": "TU_FIRECRAWL_API_KEY_AQUI" } },
-    "octave": { "command": "python3", "args": ["/home/astrid/mcp_octave/server.py"] },
-    "bolsa-mcp": { "command": "/home/astrid/bolsa-env/bin/python", "args": ["/home/astrid/bolsa-mcp/servidor_mcp.py"] },
-    "github": { "command": "/home/astrid/.nvm/versions/node/v22.22.3/bin/npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "TU_GITHUB_TOKEN_AQUI" } },
-    "openbb-mcp": { "command": "uvx", "args": ["--from", "openbb-mcp-server", "--with", "openbb", "openbb-mcp", "--transport", "stdio"] },
-    "psyche-mcp": { "command": "/home/astrid/psyche-env/bin/python3", "args": ["/home/astrid/psyche-mcp/server.py"] },
-    "physics-mcp": { "command": "/home/astrid/physics-env/bin/python3", "args": ["/home/astrid/physics-mcp/server.py"] },
-    "microbio-mcp": { "command": "/home/astrid/microbio-env/bin/python3", "args": ["/home/astrid/microbio-mcp/server.py"] },
-    "biosim-mcp": { "command": "/home/astrid/basico-env/bin/python3", "args": ["/home/astrid/biosim-mcp/server.py"] }
+    "mcp-registry": {
+      "command": "/home/astrid/.local/bin/mcp-registry",
+      "args": [
+        "serve"
+      ]
+    },
+    "blender": {
+      "command": "/home/astrid/.local/bin/blender-mcp",
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    },
+    "freecad": {
+      "command": "uvx",
+      "args": [
+        "freecad-mcp"
+      ]
+    },
+    "solvespace": {
+      "command": "node",
+      "args": [
+        "/home/astrid/solvespace-mcp/src/index.js"
+      ],
+      "env": {
+        "SOLVESPACE_CLI": "/usr/bin/solvespace-cli",
+        "SOLVESPACE_WORKDIR": "/home/astrid/solvespace-projects"
+      }
+    },
+    "qgis": {
+      "command": "/bin/bash",
+      "args": [
+        "-c",
+        "/home/astrid/.local/bin/uvx --from git+https://github.com/nkarasiak/qgis-mcp qgis-mcp"
+      ]
+    },
+    "gdal": {
+      "command": "/bin/bash",
+      "args": [
+        "-c",
+        "/home/astrid/.local/bin/uvx --from gdal-mcp gdal"
+      ]
+    },
+    "inkscape": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /home/astrid/.config/inkscape/extensions/inkmcp/inkmcp/venv/bin/activate && python -m inkmcp"
+      ]
+    },
+    "krita": {
+      "command": "python3",
+      "args": [
+        "/home/astrid/krita-mcp/server.py"
+      ]
+    },
+    "materials-project": {
+      "command": "/home/astrid/.venv/mcp/bin/mcp-materials-project",
+      "env": {
+        "MP_API_KEY": "TU_MP_API_KEY_AQUI"
+      }
+    },
+    "analisis-suelos": {
+      "command": "python3",
+      "args": [
+        "/home/astrid/mcp_suelos/server.py"
+      ]
+    },
+    "filesystem": {
+      "command": "/bin/bash",
+      "args": [
+        "-c",
+        "/home/astrid/.nvm/versions/node/v20.20.1/bin/npx -y @modelcontextprotocol/server-filesystem /home/astrid"
+      ]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ]
+    },
+    "firecrawl-mcp": {
+      "command": "/home/astrid/.nvm/versions/node/v22.22.3/bin/npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "env": {
+        "FIRECRAWL_API_KEY": "TU_FIRECRAWL_API_KEY_AQUI"
+      }
+    },
+    "octave": {
+      "command": "python3",
+      "args": [
+        "/home/astrid/mcp_octave/server.py"
+      ]
+    },
+    "bolsa-mcp": {
+      "command": "/home/astrid/bolsa-env/bin/python",
+      "args": [
+        "/home/astrid/bolsa-mcp/servidor_mcp.py"
+      ]
+    },
+    "github": {
+      "command": "/home/USUARIO/.local/bin/github-mcp-server",
+      "args": [
+        "stdio"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "TU_GITHUB_TOKEN_AQUI",
+        "GITHUB_TOOLSETS": "repos,issues,pull_requests,actions,code_security,discussions,git,labels"
+      }
+    },
+    "openbb-mcp": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "openbb-mcp-server",
+        "--with",
+        "openbb",
+        "openbb-mcp",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "psyche-mcp": {
+      "command": "/home/astrid/psyche-env/bin/python3",
+      "args": [
+        "/home/astrid/psyche-mcp/server.py"
+      ]
+    },
+    "physics-mcp": {
+      "command": "/home/astrid/physics-env/bin/python3",
+      "args": [
+        "/home/astrid/physics-mcp/server.py"
+      ]
+    },
+    "microbio-mcp": {
+      "command": "/home/astrid/microbio-env/bin/python3",
+      "args": [
+        "/home/astrid/microbio-mcp/server.py"
+      ]
+    },
+    "biosim-mcp": {
+      "command": "/home/astrid/basico-env/bin/python3",
+      "args": [
+        "/home/astrid/biosim-mcp/server.py"
+      ]
+    }
   }
 }
