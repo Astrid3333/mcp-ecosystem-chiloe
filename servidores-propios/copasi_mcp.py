@@ -320,8 +320,10 @@ def construir_modelo_simple(
     Args:
         nombre_modelo: nombre del archivo a crear (sin .xml)
         especies: lista "nombre:conc_inicial" separada por comas, ej: "A:10, B:0, C:0"
-        reacciones: lista de reacciones separadas por ';', formato "A -> B; k=0.5"
-                     (soporta '->' irreversible; usa múltiples especies con '+', ej "A + B -> C; k=0.2")
+        reacciones: lista de reacciones separadas por ';'; cada reacción en formato
+                     "A -> B, k=0.5" (usa COMA para separar la ecuación del valor de k,
+                     PUNTO Y COMA para separar reacciones distintas). Soporta '->'
+                     irreversible; usa múltiples especies con '+', ej "A + B -> C, k=0.2"
         volumen_compartimento: volumen del compartimento único (unidades del modelo)
     """
     _check_copasi()
