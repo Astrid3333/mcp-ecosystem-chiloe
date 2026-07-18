@@ -17,6 +17,7 @@ import os
 import sys
 import subprocess
 import itertools
+import re
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -281,18 +282,35 @@ def sbtcvm_assemble(source: str, syntax_only: bool = False) -> dict:
 
 
 @mcp.tool()
-def sbtcvm_convert(value: str) -> dict:
+def sbtcvm_convert(value: str, formato: str = "auto") -> dict:
     """Convierte entre decimal y balanced-ternario. Acepta un entero decimal
     como string (ej. '42', '-7') o una cadena balanced-ternario usando
-    '+', '-', '0' (ej. '+-0+'). Devuelve ambas representaciones."""
+    '+', '-', '0' (ej. '+-0+'). Devuelve ambas representaciones.
+
+    formato: "auto" (default), "decimal", o "bt" para forzar la
+    interpretacion. Cadenas compuestas SOLO por '-' y '0' con mas de un
+    caracter (ej. "-00") son ambiguas entre decimal y balanced-ternario
+    -numericamente distintas segun la interpretacion- y en modo "auto"
+    lanzan un error pidiendo que se especifique el formato explicitamente,
+    en vez de adivinar en silencio."""
     _MEM, _CPU, _IO, _devcommon, libbaltcalc = _load_vm_modules()
     btint = libbaltcalc.btint
     v = value.strip()
-    is_decimal = v.lstrip("-").isdigit()
-    if is_decimal:
+
+    if formato == "decimal":
         b = btint(int(v))
-    else:
+    elif formato == "bt":
         b = btint(v)
+    else:
+        if re.fullmatch(r"-*0+", v) and len(v) > 1:
+            raise ValueError(
+                f"Entrada ambigua '{value}': compuesta solo por '-' y '0', "
+                "puede ser decimal o balanced-ternario con resultados "
+                "distintos. Especifica formato='decimal' o formato='bt'."
+            )
+        is_decimal = v.lstrip("-").isdigit()
+        b = btint(int(v)) if is_decimal else btint(v)
+
     return {"input": value, "decimal": b.dec(), "balanced_ternary": b.bt()}
 
 
