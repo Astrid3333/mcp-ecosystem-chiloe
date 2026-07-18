@@ -136,7 +136,7 @@ def info_modelo(modelo: str) -> str:
     lines.append("\nReacciones:")
     for i in range(model.getNumReactions()):
         r = model.getReaction(i)
-        lines.append(f"  - {r.getObjectName()}: {r.getChemEqIterator}" if False else f"  - {r.getObjectName()}")
+        lines.append(f"  - {r.getObjectName()}")
 
     COPASI.CRootContainer.removeDatamodel(data_model)
     return "\n".join(lines)
