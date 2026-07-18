@@ -14,3 +14,6 @@ claude_desktop_config.json
 bolsa-env/
 node_modules/
 EOF
+*.bak
+*.bak.*
+*.diff
