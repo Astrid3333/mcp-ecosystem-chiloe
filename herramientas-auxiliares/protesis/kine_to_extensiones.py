@@ -80,11 +80,22 @@ def familia_liners_por_volumen(perfil_base_sections, condiciones):
           "dimensionarse para la condición de MAYOR volumen (peor caso), "
           "y los liners más finos se usan cuando el muñón está más pequeño.")
 
+    condiciones_por_offset = {}
+    for offset, nombre in zip(offsets, nombres):
+        if offset in condiciones_por_offset and condiciones_por_offset[offset] != nombre:
+            raise ValueError(
+                f"Offset {offset}mm ya está asignado a la condición "
+                f"'{condiciones_por_offset[offset]}'; no se puede asignar también a "
+                f"'{nombre}' -- dos condiciones con el mismo offset se pisan en "
+                f"silencio si no se resuelve explícitamente."
+            )
+        condiciones_por_offset[offset] = nombre
+
     return {
         "operation_shell": "create_outer_shell",
         "operation_liners": "create_liner_family",
         "growth_offsets_mm": offsets,
-        "condiciones_por_offset": dict(zip(offsets, nombres)),
+        "condiciones_por_offset": condiciones_por_offset,
         "max_liner_offset_mm": max(offsets),
     }
 
