@@ -33,12 +33,24 @@ import statistics
 def definir_trim_line(landmark_referencia, offset_mm, posicion_mm_en_stack):
     """
     landmark_referencia: ej. "hueco_popliteo", "pliegue_cubital", "axila"
-    offset_mm: distancia desde el landmark hasta el borde del socket.
-               Negativo = por debajo del landmark (más flexión libre),
-               positivo = por encima (más soporte, menos rango).
+    offset_mm: distancia desde el landmark hasta el borde del socket, en la
+               MISMA convención que 'position' de cross_section_stack (0 =
+               extremo proximal, crece hacia distal).
+               Positivo = el borde queda MÁS DISTAL que el landmark (por
+               debajo/más abajo anatómicamente) -> más rango de flexión libre.
+               Negativo = el borde queda MÁS PROXIMAL que el landmark (por
+               encima/más arriba) -> más soporte, menos rango.
     posicion_mm_en_stack: a qué 'position' del cross_section_stack
-               corresponde este landmark, para poder advertir si alguna
-               sección de MEDICIONES queda por encima de la trim line.
+               corresponde este landmark (0 = proximal), para poder advertir
+               si alguna sección de MEDICIONES queda por encima de la trim
+               line.
+
+    NOTA (corregido tras revisión clínica): en la versión anterior el signo
+    de offset_mm estaba invertido respecto a la convención de 'position' de
+    munon_a_secciones.py, y el ejemplo usaba hueco_popliteo con
+    posicion_mm_en_stack=100 (distal), cuando anatómicamente el hueco
+    poplíteo es proximal (cercana a position=0, similar altura que el
+    tendón rotuliano). Confirmar siempre contra prueba física.
     """
     return {
         "landmark_referencia": landmark_referencia,
@@ -47,12 +59,12 @@ def definir_trim_line(landmark_referencia, offset_mm, posicion_mm_en_stack):
         "altura_final_mm": posicion_mm_en_stack + offset_mm,
     }
 
-
 def advertir_secciones_sobre_trim_line(sections, trim_line):
     """Marca qué secciones de cross_section_stack quedarían por encima
-    de la trim line definida (candidatas a recortar del modelo final)."""
+    (más proximales, position menor) de la trim line definida -- candidatas
+    a excluir del modelo final porque el socket no debe llegar tan arriba."""
     limite = trim_line["altura_final_mm"]
-    sobrantes = [s for s in sections if s["position"] > limite]
+    sobrantes = [s for s in sections if s["position"] < limite]
     if sobrantes:
         print(f"  [aviso] {len(sobrantes)} sección(es) quedan por encima de la "
               f"trim line ({limite}mm) y deberían excluirse del socket final:")
@@ -60,10 +72,6 @@ def advertir_secciones_sobre_trim_line(sections, trim_line):
             print(f"    - position={s['position']}mm")
     return sobrantes
 
-
-# ============================================================
-# 2) FAMILIA DE LINERS POR VOLUMEN FLUCTUANTE -- KINESIOLOGÍA
-# ============================================================
 def familia_liners_por_volumen(perfil_base_sections, condiciones):
     """
     perfil_base_sections: el 'sections' generado por munon_a_secciones.py.
