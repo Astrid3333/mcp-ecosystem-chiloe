@@ -18,12 +18,21 @@ Este módulo NO reemplaza a munon_a_secciones.py -- lo complementa con:
                             (información clínica que acompaña al modelo,
                             no geometría calculada por este script)
 
+CONVENCIÓN DE POSITION (heredada de munon_a_secciones.py, obligatoria en
+todo este módulo): position=0 es el extremo PROXIMAL del stack de
+secciones transversales, y position crece hacia distal. Cualquier función
+nueva que se agregue acá debe declarar explícitamente esta convención en
+su propio docstring -- el bug original de trim_line (signo de offset_mm
+invertido) ocurrió justamente porque se escribió sin tener a la vista la
+convención documentada en el otro módulo.
+
 IMPORTANTE: todo esto es apoyo geométrico/organizativo para el proceso de
 diseño. Ninguna salida de este script reemplaza el juicio clínico del
 kinesiólogo, terapeuta ocupacional o protesista tratante, ni la prueba
 física en el paciente.
 """
 import json
+import math
 import statistics
 
 
@@ -74,7 +83,17 @@ def advertir_secciones_sobre_trim_line(sections, trim_line):
     direccion="proximal": sobran las secciones MÁS PROXIMALES que la trim
     line (position < altura_final_mm).
     direccion="distal": sobran las secciones MÁS DISTALES que la trim line
-    (position > altura_final_mm)."""
+    (position > altura_final_mm).
+
+    LIMITACIÓN CONOCIDA: esta función trata cada sección como una unidad
+    completa (circunferencial) que se incluye o excluye entera según su
+    'position'. No modela un corte que varíe dentro del contorno de una
+    misma sección (ej. pared posterior más corta que la anterior en un
+    socket PTB transtibial). Sirve como aviso/guía de qué secciones del
+    stack no van al socket final, no como generador de la geometría de
+    corte real -- eso, si hace falta, requiere trabajar contorno por
+    contorno (ej. con freecad:organic_operations), no esta función.
+    """
     limite = trim_line["altura_final_mm"]
     direccion = trim_line.get("direccion", "proximal")
 
@@ -100,6 +119,12 @@ def familia_liners_por_volumen(perfil_base_sections, condiciones):
         [{"nombre": "manana_base", "offset_mm": 0},
          {"nombre": "tarde_con_edema", "offset_mm": 3},
          {"nombre": "post_actividad_intensa", "offset_mm": 5}]
+
+    La detección de colisión usa math.isclose (no igualdad exacta de
+    floats): dos condiciones cuyo offset_mm difiera en una fracción
+    insignificante de milímetro (ej. por venir de un cálculo en vez de
+    ser constantes escritas a mano) se tratan igual que si tuvieran el
+    mismo offset, para no perder silenciosamente una de las dos.
     """
     offsets = [c["offset_mm"] for c in condiciones]
     nombres = [c["nombre"] for c in condiciones]
@@ -110,14 +135,19 @@ def familia_liners_por_volumen(perfil_base_sections, condiciones):
           "y los liners más finos se usan cuando el muñón está más pequeño.")
 
     condiciones_por_offset = {}
+    vistos = []
     for offset, nombre in zip(offsets, nombres):
-        if offset in condiciones_por_offset and condiciones_por_offset[offset] != nombre:
-            raise ValueError(
-                f"Offset {offset}mm ya está asignado a la condición "
-                f"'{condiciones_por_offset[offset]}'; no se puede asignar también a "
-                f"'{nombre}' -- dos condiciones con el mismo offset se pisan en "
-                f"silencio si no se resuelve explícitamente."
-            )
+        for offset_previo, nombre_previo in vistos:
+            if (math.isclose(offset, offset_previo, rel_tol=1e-9, abs_tol=1e-6)
+                    and nombre_previo != nombre):
+                raise ValueError(
+                    f"Offset {offset}mm es igual (o prácticamente igual, dentro de "
+                    f"tolerancia) al offset {offset_previo}mm ya asignado a la condición "
+                    f"'{nombre_previo}'; no se puede asignar también a '{nombre}' -- dos "
+                    f"condiciones con offsets iguales se pisan en silencio si no se "
+                    f"resuelve explícitamente."
+                )
+        vistos.append((offset, nombre))
         condiciones_por_offset[offset] = nombre
 
     return {
@@ -256,7 +286,7 @@ def main():
           "(trim line, condiciones de volumen, historial de calce, etc.). "
           "Ver los docstrings de cada función para el formato esperado.")
 
-    ejemplo_trim = definir_trim_line("hueco_popliteo", offset_mm=-20, posicion_mm_en_stack=100)
+    ejemplo_trim = definir_trim_line("hueco_popliteo", offset_mm=15, posicion_mm_en_stack=0)
     print("\nEjemplo trim_line:")
     print(json.dumps(ejemplo_trim, indent=2, ensure_ascii=False))
 
