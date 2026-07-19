@@ -30,47 +30,68 @@ import statistics
 # ============================================================
 # 1) TRIM LINE (línea de recorte proximal) -- KINESIOLOGÍA
 # ============================================================
-def definir_trim_line(landmark_referencia, offset_mm, posicion_mm_en_stack):
+def definir_trim_line(landmark_referencia, offset_mm, posicion_mm_en_stack, direccion="proximal"):
     """
-    landmark_referencia: ej. "hueco_popliteo", "pliegue_cubital", "axila"
+    landmark_referencia: ej. "hueco_popliteo", "pliegue_cubital", "axila",
+               "maleolo", "talon"
     offset_mm: distancia desde el landmark hasta el borde del socket, en la
                MISMA convención que 'position' de cross_section_stack (0 =
-               extremo proximal, crece hacia distal).
-               Positivo = el borde queda MÁS DISTAL que el landmark (por
-               debajo/más abajo anatómicamente) -> más rango de flexión libre.
-               Negativo = el borde queda MÁS PROXIMAL que el landmark (por
-               encima/más arriba) -> más soporte, menos rango.
+               extremo proximal, crece hacia distal). El signo NO depende
+               de 'direccion':
+               Positivo = el borde queda MÁS DISTAL que el landmark.
+               Negativo = el borde queda MÁS PROXIMAL que el landmark.
     posicion_mm_en_stack: a qué 'position' del cross_section_stack
-               corresponde este landmark (0 = proximal), para poder advertir
-               si alguna sección de MEDICIONES queda por encima de la trim
-               line.
+               corresponde este landmark (0 = proximal).
+    direccion: "proximal" (default) si landmark_referencia es un landmark
+               proximal (hueco_popliteo, pliegue_cubital, axila) -> el
+               socket no debe extenderse MÁS PROXIMAL que la trim line
+               (se excluyen las secciones con position < altura_final_mm).
+               "distal" si landmark_referencia es un landmark distal
+               (maleolo, talon) -> el socket no debe extenderse MÁS DISTAL
+               que la trim line (se excluyen las secciones con
+               position > altura_final_mm).
 
-    NOTA (corregido tras revisión clínica): en la versión anterior el signo
-    de offset_mm estaba invertido respecto a la convención de 'position' de
-    munon_a_secciones.py, y el ejemplo usaba hueco_popliteo con
-    posicion_mm_en_stack=100 (distal), cuando anatómicamente el hueco
-    poplíteo es proximal (cercana a position=0, similar altura que el
-    tendón rotuliano). Confirmar siempre contra prueba física.
+    NOTA: confirmar siempre contra prueba física / criterio del
+    kinesiólogo-TO tratante antes de aplicar al modelo final.
     """
+    if direccion not in ("proximal", "distal"):
+        raise ValueError(f"direccion debe ser 'proximal' o 'distal', recibido: {direccion!r}")
+
     return {
         "landmark_referencia": landmark_referencia,
         "offset_mm": offset_mm,
         "posicion_mm_en_stack": posicion_mm_en_stack,
+        "direccion": direccion,
         "altura_final_mm": posicion_mm_en_stack + offset_mm,
     }
 
+
 def advertir_secciones_sobre_trim_line(sections, trim_line):
-    """Marca qué secciones de cross_section_stack quedarían por encima
-    (más proximales, position menor) de la trim line definida -- candidatas
-    a excluir del modelo final porque el socket no debe llegar tan arriba."""
+    """Marca qué secciones de cross_section_stack quedarían fuera del
+    socket final según la trim line definida y la dirección del landmark
+    (ver definir_trim_line):
+
+    direccion="proximal": sobran las secciones MÁS PROXIMALES que la trim
+    line (position < altura_final_mm).
+    direccion="distal": sobran las secciones MÁS DISTALES que la trim line
+    (position > altura_final_mm)."""
     limite = trim_line["altura_final_mm"]
-    sobrantes = [s for s in sections if s["position"] < limite]
+    direccion = trim_line.get("direccion", "proximal")
+
+    if direccion == "proximal":
+        sobrantes = [s for s in sections if s["position"] < limite]
+        lado = "por encima (más proximal)"
+    else:
+        sobrantes = [s for s in sections if s["position"] > limite]
+        lado = "por debajo (más distal)"
+
     if sobrantes:
-        print(f"  [aviso] {len(sobrantes)} sección(es) quedan por encima de la "
+        print(f"  [aviso] {len(sobrantes)} sección(es) quedan {lado} de la "
               f"trim line ({limite}mm) y deberían excluirse del socket final:")
         for s in sobrantes:
             print(f"    - position={s['position']}mm")
     return sobrantes
+
 
 def familia_liners_por_volumen(perfil_base_sections, condiciones):
     """
