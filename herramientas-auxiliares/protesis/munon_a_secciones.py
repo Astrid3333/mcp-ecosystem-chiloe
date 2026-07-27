@@ -3,11 +3,32 @@
 Convierte medidas manuales de muñón (circunferencia + AP/ML con calibre)
 al formato 'sections' que espera freecad:organic_operations (cross_section_stack).
 
+ARQUITECTURA (revisión 2026-07-27): el espesor de pared YA NO se aplica con
+offset_surface + offset_map por face_index. Un loft suave (spline, la única
+forma de conseguir curvatura anatómica real en cross_section_stack) genera
+una sola cara lateral continua en OCC -- no hay "cara de la sección N" que
+clasificar, así que cualquier offset por face_index es inherentemente frágil
+(en el mejor caso) o directamente inaplicable (en el peor).
+
+En vez de eso: el espesor se hornea en el PERFIL de cada sección. Se generan
+dos stacks de secciones -- outer (medidas reales del muñón) e inner (mismas
+medidas, contraídas localmente por el espesor que corresponda a ese
+landmark) -- se loftean por separado y se restan con un booleano. El mapeo
+landmark -> espesor pasa a ser una decisión que se toma ANTES de tocar
+FreeCAD, sobre datos que vos ya conocés con certeza (tus propias mediciones),
+en vez de una que se intenta reconstruir DESPUÉS sobre topología ambigua.
+
+mapear_caras_a_secciones.py sigue siendo útil, pero solo para el rol que sí
+puede cumplir de forma confiable: etiquetar con landmark las zonas que
+devuelve contact_pressure_operations/summarize_pressure_zones para el
+reporte de QA -- no para decidir dónde va más o menos espesor durante la
+construcción.
+
 Uso típico:
     1. Tomar medidas en el paciente a distintas alturas (ver protocolo abajo).
     2. Completar la lista MEDICIONES.
-    3. Correr este script -> imprime el array 'sections' listo para pasar
-       directo al parámetro 'sections' de organic_operations/cross_section_stack.
+    3. Correr este script -> imprime los dos arrays 'sections' (outer e
+       inner) y los pasos de FreeCAD para loftear ambos y restarlos.
 
 PROTOCOLO DE MEDICIÓN SUGERIDO (ejemplo trans-tibial, adaptar a nivel real):
     - Medir cada 20mm desde el punto más proximal hasta el extremo distal.
@@ -82,9 +103,38 @@ def circunferencia_a_diametro_elipse(circunferencia_mm, relacion_ap_ml=1.15):
     return round(2 * a, 1), round(2 * b, 1)  # ap_mm, ml_mm
 
 
-def construir_secciones(mediciones, wall_thickness_map=True):
-    sections = []
-    offset_map = {}
+ESPESOR_MINIMO_MM = 1.2  # piso de seguridad: por debajo de esto el inner casi
+                          # toca el outer y el cut puede degenerar (pared
+                          # infinitamente fina o cara inválida). Si una sección
+                          # necesita menos que esto, construir_secciones() la
+                          # deja pasar pero avisa fuerte -- no la sube en silencio.
+
+
+def _espesor_para_landmark(landmark):
+    if landmark == "carga":
+        return ESPESOR_CARGA
+    elif landmark == "alivio":
+        return ESPESOR_ALIVIO
+    else:
+        return ESPESOR_NORMAL
+
+
+def construir_secciones(mediciones):
+    """
+    Devuelve (sections_outer, sections_inner, espesor_map):
+      sections_outer:  perfil real del muñón, para el loft exterior.
+      sections_inner:  mismo perfil, contraído localmente según el espesor
+                        de esa sección -- para el loft interior. width/height
+                        se reducen 2x el espesor (una vez por lado).
+      espesor_map:      {seccion_idx: espesor_mm} -- se devuelve también por
+                        separado porque sirve como referencia al pasarle las
+                        MEDICIONES originales a
+                        mapear_caras_a_secciones.posiciones_referencia_desde_mediciones()
+                        para el etiquetado de QA (ver docstring del módulo).
+    """
+    sections_outer = []
+    sections_inner = []
+    espesor_map = {}
 
     for i, m in enumerate(mediciones):
         ap = m.get("ap_mm")
@@ -101,50 +151,81 @@ def construir_secciones(mediciones, wall_thickness_map=True):
                   f"se estimó ap={ap}mm ml={ml}mm asumiendo elipse típica. "
                   f"Preferible remedir con calibre.")
 
-        sections.append({
+        landmark = m.get("landmark")
+        espesor = _espesor_para_landmark(landmark)
+        espesor_map[i] = espesor
+
+        ap_inner = ap - 2 * espesor
+        ml_inner = ml - 2 * espesor
+
+        if ap_inner < ESPESOR_MINIMO_MM or ml_inner < ESPESOR_MINIMO_MM:
+            raise ValueError(
+                f"Sección en position_mm={m['position_mm']} (landmark={landmark!r}, "
+                f"espesor={espesor}mm): el perfil interior queda en "
+                f"ap={ap_inner:.1f}mm / ml={ml_inner:.1f}mm, por debajo del piso de "
+                f"seguridad ({ESPESOR_MINIMO_MM}mm). El muñón es demasiado angosto en "
+                f"esta altura para ese espesor -- bajar ESPESOR_* para esta zona o "
+                f"remedir, no se genera geometría inválida en silencio."
+            )
+
+        sections_outer.append({
             "position": m["position_mm"],
             "shape": "ellipse",
-            "width": ap,   # antero-posterior
-            "height": ml,  # medio-lateral
+            "width": ap,     # antero-posterior
+            "height": ml,    # medio-lateral
+        })
+        sections_inner.append({
+            "position": m["position_mm"],
+            "shape": "ellipse",
+            "width": ap_inner,
+            "height": ml_inner,
         })
 
-        landmark = m.get("landmark")
-        if landmark == "carga":
-            offset_map[i] = ESPESOR_CARGA
-        elif landmark == "alivio":
-            offset_map[i] = ESPESOR_ALIVIO
-        else:
-            offset_map[i] = ESPESOR_NORMAL
-
-    return sections, offset_map
+    return sections_outer, sections_inner, espesor_map
 
 
 def main():
-    sections, offset_map = construir_secciones(MEDICIONES)
+    sections_outer, sections_inner, espesor_map = construir_secciones(MEDICIONES)
 
     print("\n" + "=" * 60)
     print("Parámetros listos para freecad:organic_operations")
     print("=" * 60)
 
-    print("\n--- Paso 1: cross_section_stack ---")
+    print("\n--- Paso 1: loft exterior (cross_section_stack) ---")
     print("operation = 'cross_section_stack'")
+    print("name = 'Socket_Outer'")
     print("sections =")
-    print(json.dumps(sections, indent=2, ensure_ascii=False))
+    print(json.dumps(sections_outer, indent=2, ensure_ascii=False))
 
-    print("\n--- Paso 2: offset_surface (espesor variable por zona) ---")
-    print("operation = 'offset_surface'")
-    print("offset_map = (índice de sección -> espesor mm)")
-    print(json.dumps(offset_map, indent=2, ensure_ascii=False))
-    print("\nNota: offset_map en la tool usa 'face_index' como clave;")
-    print("verificar en FreeCAD cómo quedan numeradas las caras tras el")
-    print("cross_section_stack antes de aplicar el offset, puede no ser 1:1")
-    print("con el índice de sección de medición.")
+    print("\n--- Paso 2: loft interior (cross_section_stack) ---")
+    print("El espesor de cada sección ya está horneado en estos perfiles")
+    print("(width/height = perfil real - 2x espesor de esa zona), así que")
+    print("este loft NO necesita ningún offset después.")
+    print("operation = 'cross_section_stack'")
+    print("name = 'Socket_Inner'")
+    print("sections =")
+    print(json.dumps(sections_inner, indent=2, ensure_ascii=False))
 
-    print("\n--- Paso 3 sugerido ---")
+    print("\n--- Paso 3: restar (freecad:boolean_operations -> cut_objects) ---")
+    print("operation = 'cut_objects'")
+    print("base = 'Socket_Outer'")
+    print("tools = ['Socket_Inner']")
+    print("name = 'Socket_Wall'")
+    print("\nEspesor efectivo por sección (referencia, ya aplicado arriba):")
+    print(json.dumps(espesor_map, indent=2, ensure_ascii=False))
+
+    print("\n--- Paso 4 sugerido: QA ---")
     print("Correr freecad:contact_pressure_operations -> sample_socket_clearance")
-    print("contra un modelo del muñón (este mismo cross_section_stack sin el")
-    print("offset, como proxy del muñón real) para screening geométrico previo")
-    print("a la prueba física.")
+    print("de 'Socket_Wall' contra un modelo del muñón (el loft de")
+    print("sections_outer, sin el corte, como proxy del muñón real).")
+    print("Para etiquetar las zonas resultantes con landmark en vez de solo")
+    print("face_index, usar mapear_caras_a_secciones.py:")
+    print("  posiciones_ref = posiciones_referencia_desde_mediciones(MEDICIONES)")
+    print("  mapeo, ambiguas = clasificar_caras(caras_de_socket_wall, posiciones_ref)")
+    print("  zonas_con_landmark = enriquecer_zonas_con_landmark(zonas_qa, mapeo)")
+    print("(ahí sí tiene sentido: Socket_Wall, post-corte, puede volver a tener")
+    print("caras discretas que clasificar -- ya no es un loft C1 continuo puro.")
+    print("Igual sigue devolviendo ambiguas en vez de adivinar, como siempre.)")
 
 
 if __name__ == "__main__":
