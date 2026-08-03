@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import subprocess, json, sys, os
 
-# Permite importar lyapunov_tool.py si está en la misma carpeta que este server.py
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lyapunov_tool import compute_lyapunov_exponent, LYAPUNOV_TOOL_SCHEMA
 from stiff_ode_tool import integrate_stiff_ode, STIFF_ODE_TOOL_SCHEMA
 from bifurcation_tool import compute_bifurcation_diagram, BIFURCATION_TOOL_SCHEMA
+from hilbert_tool import compute_hilbert_transform, HILBERT_TOOL_SCHEMA
 
 
 def run_octave(code):
@@ -29,6 +29,7 @@ TOOLS = [
     LYAPUNOV_TOOL_SCHEMA,
     STIFF_ODE_TOOL_SCHEMA,
     BIFURCATION_TOOL_SCHEMA,
+    HILBERT_TOOL_SCHEMA,
 ]
 
 
@@ -49,7 +50,7 @@ for line in sys.stdin:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "octave-mcp", "version": "1.1"},
+                    "serverInfo": {"name": "octave-mcp", "version": "1.2"},
                 },
             }
 
@@ -83,6 +84,13 @@ for line in sys.stdin:
 
             elif tool_name == "compute_bifurcation_diagram":
                 result = compute_bifurcation_diagram(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "compute_hilbert_transform":
+                result = compute_hilbert_transform(**args)
                 resp = {
                     "jsonrpc": "2.0", "id": req_id,
                     "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
