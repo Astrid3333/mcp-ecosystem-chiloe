@@ -2,6 +2,7 @@
 import subprocess, json, sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.modules.setdefault("server", sys.modules["__main__"])
 from lyapunov_tool import compute_lyapunov_exponent, LYAPUNOV_TOOL_SCHEMA
 from stiff_ode_tool import integrate_stiff_ode, STIFF_ODE_TOOL_SCHEMA
 from bifurcation_tool import compute_bifurcation_diagram, BIFURCATION_TOOL_SCHEMA
@@ -23,6 +24,8 @@ from goertzel_tool import (
     goertzel_scan,
     GOERTZEL_TOOL_SCHEMA,
 )
+from ancestral_octave_tool import ancestral_octave, ANCESTRAL_OCTAVE_TOOL_SCHEMA
+from middle_square_weyl_tool import middle_square_weyl, MIDDLE_SQUARE_WEYL_TOOL_SCHEMA
 
 
 def run_octave(code):
@@ -53,6 +56,8 @@ TOOLS = [
     INTEGRATE_SCHEMA,
     FORMULA_LIBRARY_SCHEMA,
     GOERTZEL_TOOL_SCHEMA,
+    ANCESTRAL_OCTAVE_TOOL_SCHEMA,
+    MIDDLE_SQUARE_WEYL_TOOL_SCHEMA,
 ]
 
 
@@ -163,6 +168,20 @@ for line in sys.stdin:
 
             elif tool_name == "goertzel_scan":
                 result = goertzel_scan(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "ancestral_octave":
+                result = ancestral_octave(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "middle_square_weyl":
+                result = middle_square_weyl(**args)
                 resp = {
                     "jsonrpc": "2.0", "id": req_id,
                     "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
