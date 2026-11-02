@@ -6,6 +6,23 @@ from lyapunov_tool import compute_lyapunov_exponent, LYAPUNOV_TOOL_SCHEMA
 from stiff_ode_tool import integrate_stiff_ode, STIFF_ODE_TOOL_SCHEMA
 from bifurcation_tool import compute_bifurcation_diagram, BIFURCATION_TOOL_SCHEMA
 from hilbert_tool import compute_hilbert_transform, HILBERT_TOOL_SCHEMA
+from formulas_tool import (
+    evaluate_formula,
+    solve_equation,
+    differentiate,
+    integrate_symbolic,
+    formula_library,
+    EVALUATE_FORMULA_SCHEMA,
+    SOLVE_EQUATION_SCHEMA,
+    DIFFERENTIATE_SCHEMA,
+    INTEGRATE_SCHEMA,
+    FORMULA_LIBRARY_SCHEMA,
+)
+from goertzel_tool import (
+    goertzel,
+    goertzel_scan,
+    GOERTZEL_TOOL_SCHEMA,
+)
 
 
 def run_octave(code):
@@ -30,6 +47,12 @@ TOOLS = [
     STIFF_ODE_TOOL_SCHEMA,
     BIFURCATION_TOOL_SCHEMA,
     HILBERT_TOOL_SCHEMA,
+    EVALUATE_FORMULA_SCHEMA,
+    SOLVE_EQUATION_SCHEMA,
+    DIFFERENTIATE_SCHEMA,
+    INTEGRATE_SCHEMA,
+    FORMULA_LIBRARY_SCHEMA,
+    GOERTZEL_TOOL_SCHEMA,
 ]
 
 
@@ -50,7 +73,7 @@ for line in sys.stdin:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "octave-mcp", "version": "1.2"},
+                    "serverInfo": {"name": "octave-mcp", "version": "1.3"},
                 },
             }
 
@@ -91,6 +114,55 @@ for line in sys.stdin:
 
             elif tool_name == "compute_hilbert_transform":
                 result = compute_hilbert_transform(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "evaluate_formula":
+                result = evaluate_formula(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "solve_equation":
+                result = solve_equation(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "differentiate":
+                result = differentiate(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "integrate_symbolic":
+                result = integrate_symbolic(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "formula_library":
+                result = formula_library(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "goertzel":
+                result = goertzel(**args)
+                resp = {
+                    "jsonrpc": "2.0", "id": req_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
+                }
+
+            elif tool_name == "goertzel_scan":
+                result = goertzel_scan(**args)
                 resp = {
                     "jsonrpc": "2.0", "id": req_id,
                     "result": {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]},
