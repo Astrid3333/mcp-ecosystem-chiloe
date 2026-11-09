@@ -3,8 +3,10 @@
 copasi_mcp.py — Servidor MCP para simulación bioquímica/bioreactores con COPASI.
 
 Requiere que los bindings de Python de COPASI (COPASI.py + _COPASI.so) sean
-importables. Si no están en el PYTHONPATH del sistema, ajusta COPASI_BINDINGS_DIR
-más abajo o exporta PYTHONPATH antes de lanzar el servidor.
+importables. En esta máquina están instalados en el venv
+/home/astrid/venv-copasi (COPASI 4.48.311), asi que el servidor debe lanzarse
+con ese interprete. Si en otra maquina no estan en el PYTHONPATH del sistema,
+hay que ajustar COPASI_BINDINGS_DIR o exportar PYTHONPATH antes de lanzarlo.
 
 Instalación:
     pip install mcp --break-system-packages
@@ -13,11 +15,8 @@ Uso en claude_desktop_config.json (ejemplo):
     {
       "mcpServers": {
         "copasi": {
-          "command": "python3",
-          "args": ["/home/astrid/mcp-ecosystem-chiloe/servidores-propios/copasi_mcp.py"],
-          "env": {
-            "PYTHONPATH": "/home/astrid/COPASI/build/copasi/bindings/python"
-          }
+          "command": "/home/astrid/venv-copasi/bin/python",
+          "args": ["/path/a/mcp-ecosystem-chiloe/servidores-propios/copasi_mcp.py"]
         }
       }
     }
@@ -30,11 +29,8 @@ import traceback
 from pathlib import Path
 
 # --- Localizar los bindings de COPASI ------------------------------------
-COPASI_BINDINGS_DIR = os.environ.get(
-    "COPASI_BINDINGS_DIR",
-    "/home/astrid/COPASI/build/copasi/bindings/python",
-)
-if COPASI_BINDINGS_DIR not in sys.path:
+COPASI_BINDINGS_DIR = os.environ.get("COPASI_BINDINGS_DIR", "")
+if COPASI_BINDINGS_DIR and COPASI_BINDINGS_DIR not in sys.path:
     sys.path.insert(0, COPASI_BINDINGS_DIR)
 
 try:
@@ -64,6 +60,69 @@ def _check_copasi():
             "No se pudo importar COPASI. Revisa COPASI_BINDINGS_DIR / PYTHONPATH.\n"
             f"Error original:\n{COPASI_IMPORT_ERROR}"
         )
+
+
+def _load_model(data_model, path: Path) -> bool:
+    """
+    Carga un modelo en un CDataModel.
+
+    Los archivos que genera saveModel() son CopasiML (no SBML), asi que
+    importSBML() los rechaza. Se intenta primero loadModel() y, si falla,
+    importSBML() para archivos SBML genuinos de otras fuentes.
+    """
+    try:
+        if data_model.loadModel(str(path)):
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        return bool(data_model.importSBML(str(path)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _reparar_mapeo_reacciones(model) -> None:
+    """
+    Re-aplica el esquema de cada reacción después de cargar un modelo.
+
+    Al exportar a CopasiML y volver a importar, el mapeo interno
+    substrato/producto -> metabolito se pierde (aunque getChemEq() siga
+    mostrando el texto correcto). Con ese mapeo roto, la simulación aborta
+    con 'Invalid state' y devuelve NaN. Re-aplicar el esquema y la función
+    reconstruye el mapeo; los valores de los parámetros se guardan y restauran
+    para no perderlos al re-aplicar la función.
+    """
+    for i in range(model.getNumReactions()):
+        r = model.getReaction(i)
+        esquema = r.getReactionScheme()
+        if not esquema:
+            continue
+        valores = {}
+        try:
+            fp = r.getFunctionParameters()
+            for j in range(fp.size()):
+                nombre = fp.getParameter(j).getObjectName()
+                try:
+                    valor = r.getParameterValue(nombre)
+                except Exception:  # noqa: BLE001
+                    continue
+                if isinstance(valor, (int, float)) and valor == valor:
+                    valores[nombre] = float(valor)
+        except Exception:  # noqa: BLE001
+            pass
+        funcion = None
+        try:
+            funcion = r.getFunction()
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            r.setReactionScheme(esquema)
+            if funcion is not None:
+                r.setFunction(funcion)
+            for nombre, valor in valores.items():
+                r.setParameterValue(nombre, valor)
+        except Exception:  # noqa: BLE001
+            continue
 
 
 def _resolve_model_path(model_name: str) -> Path:
@@ -108,7 +167,7 @@ def info_modelo(modelo: str) -> str:
     path = _resolve_model_path(modelo)
 
     data_model = COPASI.CRootContainer.addDatamodel()
-    if not data_model.importSBML(str(path)):
+    if not _load_model(data_model, path):
         return f"Error al importar SBML: {path}"
 
     model = data_model.getModel()
@@ -161,12 +220,14 @@ def simular(modelo: str, duracion: float = 100.0, pasos: int = 100, nombre_salid
     path = _resolve_model_path(modelo)
 
     data_model = COPASI.CRootContainer.addDatamodel()
-    if not data_model.importSBML(str(path)):
+    if not _load_model(data_model, path):
         return f"Error al importar SBML: {path}"
 
     task = data_model.getTask("Time-Course")
     if task is None or not isinstance(task, COPASI.CTrajectoryTask):
         return "El modelo no tiene una tarea de Time-Course disponible."
+
+    _reparar_mapeo_reacciones(data_model.getModel())
 
     problem = task.getProblem()
     problem.setStepNumber(pasos)
@@ -175,6 +236,7 @@ def simular(modelo: str, duracion: float = 100.0, pasos: int = 100, nombre_salid
     task.setMethodType(COPASI.CTaskEnum.Method_deterministic)
 
     try:
+        data_model.getModel().compileIfNecessary()
         data_model.getModel().applyInitialValues()
         success = task.processWithOutputFlags(True, COPASI.CCopasiTask.ONLY_TIME_SERIES)
     except Exception as e:  # noqa: BLE001
@@ -228,7 +290,7 @@ def obtener_parametro(modelo: str, nombre_parametro: str) -> str:
     _check_copasi()
     path = _resolve_model_path(modelo)
     data_model = COPASI.CRootContainer.addDatamodel()
-    if not data_model.importSBML(str(path)):
+    if not _load_model(data_model, path):
         return f"Error al importar SBML: {path}"
 
     model = data_model.getModel()
@@ -266,7 +328,7 @@ def fijar_parametro(modelo: str, nombre_parametro: str, valor: float, guardar_co
     _check_copasi()
     path = _resolve_model_path(modelo)
     data_model = COPASI.CRootContainer.addDatamodel()
-    if not data_model.importSBML(str(path)):
+    if not _load_model(data_model, path):
         return f"Error al importar SBML: {path}"
 
     model = data_model.getModel()
@@ -283,6 +345,9 @@ def fijar_parametro(modelo: str, nombre_parametro: str, valor: float, guardar_co
         for i in range(model.getNumMetabs()):
             s = model.getMetabolite(i)
             if s.getObjectName() == nombre_parametro:
+                # setInitialConcentration() no se persiste al guardar el modelo;
+                # la expresión inicial si.
+                s.setInitialExpression(repr(float(valor)))
                 s.setInitialConcentration(valor)
                 encontrado = True
                 break
@@ -342,9 +407,18 @@ def construir_modelo_simple(
         nombre, conc = item.split(":")
         nombre = nombre.strip()
         conc = float(conc.strip())
-        metab = model.createMetabolite(nombre, compartment.getObjectName())
-        metab.setInitialConcentration(conc)
-        especies_dict[nombre] = metab
+        model.createMetabolite(nombre, compartment.getObjectName())
+        especies_dict[nombre] = conc
+
+    # Los metabolitos recién creados no forman parte del modelo hasta que se
+    # compila: setInitialConcentration() sobre el objeto desligado se pierde
+    # al guardar. Se compila y se asigna la expresión inicial sobre los
+    # metabolitos ya registrados (setInitialExpression si persiste al guardar).
+    model.compileIfNecessary()
+    for i in range(model.getNumMetabs()):
+        metab = model.getMetabolite(i)
+        if metab.getObjectName() in especies_dict:
+            metab.setInitialExpression(repr(especies_dict[metab.getObjectName()]))
 
     reacciones_creadas = []
     for idx, r in enumerate(reacciones.split(";")):
@@ -366,7 +440,7 @@ def construir_modelo_simple(
                 pass
 
         reaction = model.createReaction(f"r{idx+1}")
-        reaction.setChemEq(eq_part)
+        reaction.setReactionScheme(eq_part)
         # cinética de masa-acción por defecto
         fun = COPASI.CRootContainer.getFunctionList().findFunction("Mass action (irreversible)")
         reaction.setFunction(fun)
@@ -445,12 +519,13 @@ def ajustar_parametro_simple(
         valor = valor_min + (valor_max - valor_min) * i / max(n_puntos - 1, 1)
 
         data_model = COPASI.CRootContainer.addDatamodel()
-        if not data_model.importSBML(str(path)):
+        if not _load_model(data_model, path):
             COPASI.CRootContainer.removeDatamodel(data_model)
             return f"Error al importar SBML: {path}"
 
         model = data_model.getModel()
         encontrado = False
+        # 1) aplicar el valor candidato
         for j in range(model.getNumModelValues()):
             mv = model.getModelValue(j)
             if mv.getObjectName() == nombre_parametro:
@@ -461,13 +536,32 @@ def ajustar_parametro_simple(
             for j in range(model.getNumMetabs()):
                 s = model.getMetabolite(j)
                 if s.getObjectName() == nombre_parametro:
+                    s.setInitialExpression(repr(float(valor)))
                     s.setInitialConcentration(valor)
                     encontrado = True
+                    break
+        if not encontrado:
+            # parametro de funcion de reaccion (por ejemplo k1)
+            for j in range(model.getNumReactions()):
+                r = model.getReaction(j)
+                try:
+                    r.setParameterValue(nombre_parametro, valor)
+                    encontrado = True
+                except Exception:  # noqa: BLE001
+                    continue
+                if encontrado:
                     break
         if not encontrado:
             COPASI.CRootContainer.removeDatamodel(data_model)
             return f"No encontré '{nombre_parametro}' en el modelo."
 
+        # 2) reparar el mapeo de reacciones DESPUES de cambiar el valor: al
+        # re-aplicar el esquema sobre un modelo ya recompilado, el modelo
+        # queda con la expresion inicial en NaN y la simulacion aborta.
+        _reparar_mapeo_reacciones(model)
+
+        # 3) compilar una sola vez y aplicar los valores iniciales
+        model.compileIfNecessary()
         model.applyInitialValues()
 
         task = data_model.getTask("Time-Course")
@@ -495,6 +589,11 @@ def ajustar_parametro_simple(
         sim_t = [ts.getData(s, time_idx) for s in range(ts.getRecordedSteps())]
         sim_y = [ts.getData(s, col_idx) for s in range(ts.getRecordedSteps())]
 
+        # COPASI devuelve la serie en numero de particulas; el modelo usa
+        # concentraciones. Sin convertir, el SSE compara mol/L contra moleculas
+        # (~1e23 veces mas) y el ajuste no significa nada.
+        sim_y = [_particulas_a_concentracion(v, model) for v in sim_y]
+
         sse = 0.0
         for te, ye in zip(exp_t, exp_y):
             # interpolación lineal simple sobre la serie simulada
@@ -516,6 +615,26 @@ def ajustar_parametro_simple(
         "y algoritmos más robustos (evolución diferencial, etc.) se puede usar la tarea de "
         "Parameter Estimation nativa de COPASI — avísame si quieres que agregue esa versión."
     )
+
+
+def _particulas_a_concentracion(valor, model) -> float:
+    """
+    Convierte un valor de la serie de COPASI (numero de particulas) a la
+    unidad del modelo (concentracion): divide por N_A y por el volumen del
+    compartimento.
+    """
+    if not isinstance(valor, (int, float)) or valor != valor:
+        return valor
+    n_a = 6.02214076e23
+    volumen = 1.0
+    try:
+        if model.getNumCompartments() > 0:
+            v = model.getCompartment(0).getInitialValue()
+            if v and v == v and v > 0:
+                volumen = float(v)
+    except Exception:  # noqa: BLE001
+        pass
+    return valor / n_a / volumen
 
 
 def _interp(xs, ys, x):
@@ -541,9 +660,14 @@ def estado_copasi() -> str:
     """Verifica si los bindings de COPASI se importaron correctamente."""
     if COPASI_OK:
         version = COPASI.CVersion.VERSION.getVersion()
-        return f"COPASI OK — versión {version}. PYTHONPATH usado: {COPASI_BINDINGS_DIR}"
+        modulo = getattr(COPASI, "__file__", "?")
+        return (
+            f"COPASI OK — versión {version}.\n"
+            f"Módulo: {modulo}\n"
+            f"COPASI_BINDINGS_DIR: {COPASI_BINDINGS_DIR or '(sin definir)'}"
+        )
     return f"COPASI NO disponible.\n{COPASI_IMPORT_ERROR}"
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run()

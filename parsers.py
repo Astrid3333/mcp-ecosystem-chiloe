@@ -10,12 +10,33 @@ import re
 from pathlib import Path
 
 
-def parse_gromacs_log(log_path: str) -> dict:
+# Nombres que GROMACS usa para el log completo que escribe en el directorio
+# de trabajo. El stdout capturado por el job solo trae la salida de pantalla.
+GROMACS_LOG_NAMES = ("topol.log", "md.log", "mdout.log")
+
+
+def parse_gromacs_log(log_path: str, cwd: str | None = None) -> dict:
+    """
+    Parsea el log de GROMACS.
+
+    Si se pasa 'cwd', se busca primero el log completo que GROMACS escribe en el
+    directorio de trabajo (topol.log / md.log), que es el unico que contiene los
+    bloques de energia y el 'Finished mdrun'. Si no existe, se usa 'log_path'
+    (el stdout capturado del proceso).
+    """
     p = Path(log_path)
-    if not p.exists():
+    source = p
+    if cwd:
+        for name in GROMACS_LOG_NAMES:
+            candidate = Path(cwd) / name
+            if candidate.exists() and candidate.stat().st_size > 0:
+                source = candidate
+                break
+
+    if not source.exists():
         return {"error": f"No existe el log: {log_path}"}
 
-    text = p.read_text(errors="ignore")
+    text = source.read_text(errors="ignore")
 
     # Bloques "Energies (kJ/mol)" que GROMACS imprime periodicamente
     blocks = []
@@ -23,12 +44,24 @@ def parse_gromacs_log(log_path: str) -> dict:
         blocks.append(m.group(1).strip())
 
     finished = "Finished mdrun" in text or "Finished mdrun on rank" in text
-    had_error = bool(re.search(r"Fatal error|error", text, re.I))
+    # Solo marcadores de error real: el texto normal de GROMACS menciona
+    # "the error in the average pressure", asi que buscar 'error' a secas
+    # daba falsos positivos en cualquier simulacion exitosa.
+    had_error = bool(
+        re.search(r"Fatal error|^ERROR \d+|\bSegmentation fault\b", text, re.M)
+    )
 
     performance = None
     perf_match = re.search(r"Performance:\s+([\d.]+)\s+ns/day", text)
     if perf_match:
         performance = f"{perf_match.group(1)} ns/day"
+    else:
+        # GROMACS 2018+ imprime las unidades en la linea anterior:
+        #   (ns/day)    (hour/ns)
+        #   Performance:       88.701        0.271
+        perf_match = re.search(r"Performance:\s+([\d.]+)", text)
+        if perf_match:
+            performance = f"{perf_match.group(1)} ns/day"
 
     return {
         "finished": finished,
@@ -36,6 +69,7 @@ def parse_gromacs_log(log_path: str) -> dict:
         "energy_blocks_found": len(blocks),
         "last_energy_block": blocks[-1] if blocks else None,
         "performance": performance,
+        "log_file": str(source),
     }
 
 

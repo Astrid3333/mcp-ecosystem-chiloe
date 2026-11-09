@@ -13,6 +13,7 @@ Uso:
 la config del MCP, ver README.md)
 """
 
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -27,6 +28,9 @@ mcp = FastMCP("md-simulation")
 
 WORKDIR = Path.home() / "md_mcp_runs"
 WORKDIR.mkdir(parents=True, exist_ok=True)
+
+# Tiempo maximo (segundos) para la etapa grompp, que es sincrona.
+GROMPP_TIMEOUT_S = 300
 
 
 # ---------------------------------------------------------------------
@@ -119,30 +123,79 @@ def generate_lammps_input(job_name: str, sim_type: str = "nve", nsteps: int = 10
 def run_gromacs(job_name: str, mdp_path: str, gro_path: str, top_path: str,
                  output_dir: str | None = None, n_threads: int = 0) -> dict:
     """
-    Lanza una simulacion de GROMACS en background: corre 'gmx grompp' para
-    preparar el .tpr y luego 'gmx mdrun' para ejecutarla.
+    Lanza una simulacion de GROMACS en background en dos etapas: primero
+    'gmx grompp' (sincrono, arma el .tpr) y despues 'gmx mdrun' (background).
 
     mdp_path, gro_path, top_path: rutas a los archivos .mdp, .gro y .top.
     output_dir: carpeta donde correr el job (por defecto ~/md_mcp_runs/<job_name>).
     n_threads: 0 deja que GROMACS elija automaticamente.
     Devuelve un job_id para consultar estado despues con job_status().
+
+    Las etapas van separadas porque el job se lanza con shell=False: un '&&'
+    en el comando pasaria a ser un argumento literal para gmx.
     """
-    if shutil.which("gmx") is None:
+    gmx_bin = shutil.which("gmx")
+    if gmx_bin is None:
         return {"error": "gmx no esta instalado o no esta en el PATH. Corre install/install_gromacs.sh"}
 
     cwd = Path(output_dir) if output_dir else WORKDIR / job_name
     cwd.mkdir(parents=True, exist_ok=True)
     log_path = cwd / "mdrun.log"
+    grompp_log_path = cwd / "grompp.log"
 
-    nt_flag = f"-nt {n_threads}" if n_threads and n_threads > 0 else ""
-    cmd = (
-        f"gmx grompp -f {mdp_path} -c {gro_path} -p {top_path} -o topol.tpr -maxwarn 5 "
-        f"&& gmx mdrun -deffnm topol {nt_flag}"
+    nt_argv = ["-nt", str(n_threads)] if n_threads and n_threads > 0 else []
+    grompp_argv = [
+        gmx_bin, "grompp",
+        "-f", str(mdp_path),
+        "-c", str(gro_path),
+        "-p", str(top_path),
+        "-o", "topol.tpr",
+        "-maxwarn", "5",
+    ]
+    mdrun_argv = [gmx_bin, "mdrun", "-deffnm", "topol", *nt_argv]
+
+    # Etapa 1: grompp (sincrono). Si falla, no se lanza la simulacion.
+    try:
+        grompp = subprocess.run(
+            grompp_argv,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=GROMPP_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "error": f"grompp excedio el timeout de {GROMPP_TIMEOUT_S}s",
+            "stage": "grompp",
+            "cwd": str(cwd),
+        }
+    except OSError as exc:
+        return {"error": f"No se pudo ejecutar grompp: {exc}", "stage": "grompp"}
+
+    grompp_log_path.write_text(
+        (grompp.stdout or "") + (grompp.stderr or ""), encoding="utf-8"
     )
+    if grompp.returncode != 0:
+        return {
+            "error": "grompp fallo; no se lanzo la simulacion",
+            "stage": "grompp",
+            "returncode": grompp.returncode,
+            "log_path": str(grompp_log_path),
+            "log_tail": jobs.tail_log(str(grompp_log_path), 30),
+            "cwd": str(cwd),
+        }
 
+    # Etapa 2: mdrun como job en background (sin operadores de shell).
+    cmd = " ".join(shlex.quote(arg) for arg in mdrun_argv)
     job_id = jobs.create_job(job_name, "gromacs", str(cwd), str(log_path), cmd)
     pid = jobs.start_job(job_id)
-    return {"job_id": job_id, "pid": pid, "cwd": str(cwd), "log_path": str(log_path)}
+    return {
+        "job_id": job_id,
+        "pid": pid,
+        "cwd": str(cwd),
+        "log_path": str(log_path),
+        "grompp_log_path": str(grompp_log_path),
+    }
 
 
 @mcp.tool()
@@ -210,7 +263,7 @@ def parse_results(job_id: str) -> dict:
         return {"error": f"No se encontro el job_id: {job_id}"}
 
     if job["engine"] == "gromacs":
-        return parsers.parse_gromacs_log(job["log_path"])
+        return parsers.parse_gromacs_log(job["log_path"], job.get("cwd"))
     elif job["engine"] == "lammps":
         return parsers.parse_lammps_log(job["log_path"])
     else:
