@@ -1,7 +1,7 @@
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 import yfinance as yf
 
-mcp = FastMCP("Bolsa MCP")
+mcp = FastMCP("bolsa-mcp")
 
 @mcp.tool()
 def obtener_precio(ticker: str) -> dict:

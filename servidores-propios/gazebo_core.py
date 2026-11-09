@@ -3,33 +3,27 @@
 Gazebo Harmonic MCP Server
 Control de simulaciones Gazebo desde Claude Desktop
 """
-import subprocess
 import json
 import os
 import signal
-from fastmcp import FastMCP
+import subprocess
+import shutil
+import tempfile
+from mcp.server.fastmcp import FastMCP
+
+from gazebo_utils import run_gz
 
 mcp = FastMCP("gazebo-mcp")
 
 GZ_SIM_PROCESS = None
 
-def run_gz(args: list, timeout: int = 10) -> dict:
-    """Ejecuta un comando gz y retorna resultado"""
-    try:
-        result = subprocess.run(
-            ["gz"] + args,
-            capture_output=True, text=True, timeout=timeout
-        )
-        return {
-            "stdout": result.stdout.strip(),
-            "stderr": result.stderr.strip(),
-            "returncode": result.returncode,
-            "ok": result.returncode == 0
-        }
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "error": f"Timeout después de {timeout}s"}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+
+def _which(bin_name):
+    """Devuelve la ruta absoluta al binario (evita B607 ruta parcial)."""
+    path = shutil.which(bin_name)
+    if not path:
+        raise RuntimeError(f"{bin_name} no encontrado en PATH")
+    return path
 
 
 @mcp.tool()
@@ -80,7 +74,7 @@ def gz_stop() -> str:
         GZ_SIM_PROCESS.wait(timeout=5)
         return f"Simulación detenida (PID {GZ_SIM_PROCESS.pid})"
     # También mata cualquier proceso gz suelto
-    subprocess.run(["pkill", "-f", "gz sim"], capture_output=True)
+    subprocess.run([_which("pkill"), "-f", "gz sim"], capture_output=True)
     return "No había simulación activa (limpieza realizada)"
 
 
@@ -140,8 +134,8 @@ def gz_spawn_model(model_name: str, model_type: str = "box",
   </model>
 </sdf>"""
     
-    sdf_path = f"/tmp/{model_name}.sdf"
-    with open(sdf_path, "w") as f:
+    fd, sdf_path = tempfile.mkstemp(suffix=".sdf", prefix="gazebo_model_")
+    with os.fdopen(fd, "w") as f:
         f.write(sdf)
     
     r = run_gz(["service", "-s", "/world/default/create",

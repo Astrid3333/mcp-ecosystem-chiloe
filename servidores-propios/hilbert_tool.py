@@ -9,6 +9,7 @@ import subprocess
 import json
 import tempfile
 import os
+import shutil
 
 HILBERT_TOOL_SCHEMA = {
     "name": "compute_hilbert_transform",
@@ -125,6 +126,14 @@ _PRESETS = {
 }
 
 
+def _octave_bin():
+    """Devuelve la ruta absoluta al binario de octave (evita B607 ruta parcial)."""
+    path = shutil.which("octave")
+    if not path:
+        raise RuntimeError("octave no encontrado en PATH")
+    return path
+
+
 def _downsample(vals, n_out):
     n = len(vals)
     if n_out is None or n_out >= n:
@@ -169,13 +178,13 @@ def compute_hilbert_transform(
         .replace("__SIGNAL_GEN__", signal_gen)
     )
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".m", delete=False) as f:
+    fd, script_path = tempfile.mkstemp(suffix=".m", prefix="hilbert_")
+    with os.fdopen(fd, "w") as f:
         f.write(octave_code)
-        script_path = f.name
 
     try:
         proc = subprocess.run(
-            ["octave", "--no-gui", "--quiet", script_path],
+            [_octave_bin(), "--no-gui", "--quiet", script_path],
             capture_output=True, text=True, timeout=30,
         )
         if proc.returncode != 0:

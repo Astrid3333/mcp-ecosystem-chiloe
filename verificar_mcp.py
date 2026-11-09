@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+verificar_mcp.py
+
 Verifica que cada servidor MCP configurado en claude_desktop_config.json
 responda correctamente al handshake JSON-RPC 'initialize'.
 
@@ -8,31 +10,49 @@ Uso:
     python3 verificar_mcp.py --timeout 8
     python3 verificar_mcp.py --solo github,octave
 """
+
+import argparse
 import json
+import os
+import pathlib
 import subprocess
 import sys
-import pathlib
-import argparse
-import os
+from typing import Any, Dict, List, Optional, Tuple
 
-CONFIG_PATH = pathlib.Path.home() / ".config/Claude/claude_desktop_config.json"
+CONFIG_PATH = pathlib.Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+TEMPLATE_PATH = pathlib.Path(__file__).resolve().parent / "claude_desktop_config.template.json"
 
-INIT_MSG = {
+INIT_MSG: Dict[str, Any] = {
     "jsonrpc": "2.0",
     "id": 1,
     "method": "initialize",
     "params": {
         "protocolVersion": "2024-11-05",
         "capabilities": {},
-        "clientInfo": {"name": "verificador-manual", "version": "1.0"}
-    }
+        "clientInfo": {"name": "verificador-manual", "version": "1.0"},
+    },
 }
 
 
-def test_server(name, cfg, timeout):
+def test_server(
+    name: str,
+    cfg: Dict[str, Any],
+    timeout: float,
+) -> Tuple[str, str, Any, Optional[str]]:
+    """Ejecuta el handshake JSON-RPC 'initialize' contra un servidor MCP.
+
+    Args:
+        name: Nombre del servidor (clave en mcpServers).
+        cfg: Configuración del servidor (debe contener 'command' y opcional 'args', 'env').
+        timeout: Tiempo máximo de espera en segundos.
+
+    Returns:
+        Tupla con (nombre, estado, detalle, stderr_opcional).
+        Estados posibles: OK, RESPONDIO_CON_ERROR, SIN_RESPUESTA_JSONRPC, FALLO, TIMEOUT, ERROR.
+    """
     command = cfg.get("command")
-    args = cfg.get("args", [])
-    env_extra = cfg.get("env", {})
+    args: List[str] = cfg.get("args", [])
+    env_extra: Dict[str, str] = cfg.get("env", {})
 
     if not command:
         return name, "SIN_COMANDO", "No tiene 'command' definido en el config", None
@@ -62,7 +82,7 @@ def test_server(name, cfg, timeout):
     stderr = proc.stderr.strip()
 
     # Buscar una línea de stdout que parsee como JSON-RPC válido con resultado
-    respuesta_valida = None
+    respuesta_valida: Optional[Dict[str, Any]] = None
     for line in stdout.splitlines():
         line = line.strip()
         if not line:
@@ -85,19 +105,48 @@ def test_server(name, cfg, timeout):
         return name, "SIN_RESPUESTA_JSONRPC", detalle, stderr[:300] if stderr else None
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--timeout", type=float, default=6.0)
-    parser.add_argument("--solo", type=str, default=None,
-                         help="Lista de nombres separados por coma, ej: github,octave")
+def _load_config(config_path: pathlib.Path) -> Dict[str, Any]:
+    """Carga el archivo de configuración de Claude Desktop.
+
+    Args:
+        config_path: Ruta al archivo JSON de configuración.
+
+    Returns:
+        Diccionario con el contenido del config, o vacío si no existe.
+    """
+    if not config_path.exists():
+        return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def main() -> None:
+    """Punto de entrada principal. Ejecuta el handshake contra todos los servidores MCP configurados."""
+    parser = argparse.ArgumentParser(description="Verifica servidores MCP configurados")
+    parser.add_argument("--timeout", type=float, default=6.0, help="Tiempo de espera en segundos (default: 6.0)")
+    parser.add_argument(
+        "--solo",
+        type=str,
+        default=None,
+        help="Lista de nombres separados por coma, ej: github,octave",
+    )
     args = parser.parse_args()
 
-    if not CONFIG_PATH.exists():
+    config_path = CONFIG_PATH
+    if not CONFIG_PATH.exists() and TEMPLATE_PATH.exists():
+        print(
+            f"Aviso: no existe el config real en {CONFIG_PATH}; "
+            f"usando el template del repo ({TEMPLATE_PATH})"
+        )
+        config_path = TEMPLATE_PATH
+    elif not CONFIG_PATH.exists():
         print(f"No se encontró el config en {CONFIG_PATH}")
         sys.exit(1)
 
-    data = json.loads(CONFIG_PATH.read_text())
-    servers = data.get("mcpServers", {})
+    data = _load_config(config_path)
+    servers: Dict[str, Any] = data.get("mcpServers", {})
 
     if args.solo:
         filtro = set(s.strip() for s in args.solo.split(","))
@@ -109,7 +158,7 @@ def main():
 
     print(f"Probando {len(servers)} servidor(es) MCP (timeout={args.timeout}s c/u)...\n")
 
-    resultados = []
+    resultados: List[Tuple[str, str, Any, Optional[str]]] = []
     for name, cfg in servers.items():
         print(f"  -> {name} ...", end=" ", flush=True)
         res = test_server(name, cfg, args.timeout)

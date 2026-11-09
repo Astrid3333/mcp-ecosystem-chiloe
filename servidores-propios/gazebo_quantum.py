@@ -18,55 +18,18 @@ Gazebo nunca "sabe" que hubo cómputo cuántico de por medio: este módulo
 simula el qutrit en proceso separado y usa el resultado de la medición
 como entrada discreta de control para gz_set_pose / gz_apply_force.
 """
-import subprocess
 import os
-import math
 import json
 from typing import Optional
 
 import numpy as np
 import pennylane as qml
 
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
+
+from gazebo_utils import run_gz, euler_to_quaternion
 
 mcp = FastMCP("gazebo-quantum")
-
-
-# ----------------------------------------------------------------------
-# Utilidades Gazebo (mismo patrón que gazebo_core.py / gazebo_entities.py,
-# repetido aquí para que este servidor sea independiente y no dependa de
-# imports cruzados entre los tres archivos fuente).
-# ----------------------------------------------------------------------
-
-def run_gz(args: list, timeout: int = 10) -> dict:
-    """Ejecuta un comando gz y retorna resultado"""
-    try:
-        result = subprocess.run(
-            ["gz"] + args,
-            capture_output=True, text=True, timeout=timeout
-        )
-        return {
-            "stdout": result.stdout.strip(),
-            "stderr": result.stderr.strip(),
-            "returncode": result.returncode,
-            "ok": result.returncode == 0
-        }
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "error": f"Timeout después de {timeout}s"}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
-
-def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> dict:
-    cr = math.cos(roll / 2); sr = math.sin(roll / 2)
-    cp = math.cos(pitch / 2); sp = math.sin(pitch / 2)
-    cy = math.cos(yaw / 2);  sy = math.sin(yaw / 2)
-    return {
-        "x": sr * cp * cy - cr * sp * sy,
-        "y": cr * sp * cy + sr * cp * sy,
-        "z": cr * cp * sy - sr * sp * cy,
-        "w": cr * cp * cy + sr * sp * sy,
-    }
 
 
 # ----------------------------------------------------------------------
@@ -206,7 +169,7 @@ def qtrit_to_pose(model_name: str, gate: str = "THadamard", theta: float = 1.570
             if len(nums) >= 3:
                 x0, y0, z0 = nums[0], nums[1], nums[2]
         except Exception:
-            pass
+            pass  # nosec: best-effort pose read; x0/y0/z0 ya tienen valores por defecto (0.0, 0.0, 0.5)
 
     new_x = x0 + dx
     req = (

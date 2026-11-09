@@ -107,11 +107,11 @@ def bias_truncamiento(n_muestras=10000, width=24, seed=42):
 
     Devuelve (media_error, error_absoluto_medio, errores).
     """
-    import random
+    import random  # nosec: simulación numérica de errores, no criptografía
     random.seed(seed)
     errores = []
     for _ in range(n_muestras):
-        x = random.uniform(-1000, 1000)
+        x = random.uniform(-1000, 1000)  # nosec: valor de prueba, no clave criptográfica
         bt = BTFloat.from_float(x, width)
         errores.append(bt.to_float() - x)
     media = sum(errores) / len(errores)
