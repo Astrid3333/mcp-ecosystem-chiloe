@@ -3,9 +3,7 @@
 Gazebo Harmonic MCP Server
 Control de simulaciones Gazebo desde Claude Desktop
 """
-import json
 import os
-import signal
 import subprocess
 import shutil
 import tempfile

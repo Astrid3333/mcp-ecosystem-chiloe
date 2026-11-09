@@ -4,20 +4,13 @@ import subprocess
 import json
 import tempfile
 import os
-import shutil
+
+from octave_runner import octave_bin
 
 mcp = FastMCP("analisis-suelos")
 
 SOILGRIDS_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
 USGS_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-
-
-def _octave_bin():
-    """Devuelve la ruta absoluta al binario de octave (evita B607 ruta parcial)."""
-    path = shutil.which("octave")
-    if not path:
-        raise RuntimeError("octave no encontrado en PATH")
-    return path
 
 
 @mcp.tool()
@@ -81,7 +74,7 @@ def ejecutar_octave(script: str, timeout_s: int = 30) -> str:
 
     try:
         result = subprocess.run(
-            [_octave_bin(), "--norc", script_path],
+            [octave_bin(), "--norc", script_path],
             capture_output=True, text=True, timeout=timeout_s,
         )
         return json.dumps({

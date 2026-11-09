@@ -18,7 +18,6 @@ import sys
 import subprocess
 import itertools
 import re
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 

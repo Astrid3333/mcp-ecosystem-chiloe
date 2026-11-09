@@ -34,18 +34,15 @@ import sympy
 from sympy import (
     E,
     I,
-    Symbol,
     diff,
     exp,
     integrate,
     log,
-    nsimplify,
     oo,
     parse_expr,
     pi,
     solve,
     sqrt,
-    sympify,
 )
 from sympy.parsing.sympy_parser import (
     convert_xor,

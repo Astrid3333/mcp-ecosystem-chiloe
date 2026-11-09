@@ -12,6 +12,7 @@ import os
 import shlex
 import time
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -73,7 +74,7 @@ def create_job(
         Identificador único del trabajo (job_id).
     """
     jobs = _load()
-    job_id = f"{engine}_{job_name}_{int(time.time())}"
+    job_id = f"{engine}_{job_name}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
     jobs[job_id] = {
         "job_id": job_id,
         "job_name": job_name,

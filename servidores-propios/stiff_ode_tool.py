@@ -243,7 +243,6 @@ STIFF_ODE_TOOL_SCHEMA = {
 
 
 if __name__ == "__main__":
-    import json as _json
     for sys_name, solver in [("van_der_pol", "ode15s"), ("van_der_pol", "lsode"), ("robertson", "ode15s")]:
         r = integrate_stiff_ode(system=sys_name, solver=solver, n_output_points=50)
         if "error" in r:

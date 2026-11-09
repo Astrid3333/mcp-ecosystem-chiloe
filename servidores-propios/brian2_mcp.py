@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from brian2 import (
@@ -11,9 +11,6 @@ from brian2 import (
     Network,
     start_scope,
     ms,
-    mV,
-    Hz,
-    run,
 )
 
 from mcp.server.fastmcp import FastMCP

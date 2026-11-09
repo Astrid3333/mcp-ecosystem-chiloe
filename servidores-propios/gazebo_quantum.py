@@ -18,7 +18,6 @@ Gazebo nunca "sabe" que hubo cómputo cuántico de por medio: este módulo
 simula el qutrit en proceso separado y usa el resultado de la medición
 como entrada discreta de control para gz_set_pose / gz_apply_force.
 """
-import os
 import json
 from typing import Optional
 
@@ -27,7 +26,7 @@ import pennylane as qml
 
 from mcp.server.fastmcp import FastMCP
 
-from gazebo_utils import run_gz, euler_to_quaternion
+from gazebo_utils import run_gz
 
 mcp = FastMCP("gazebo-quantum")
 

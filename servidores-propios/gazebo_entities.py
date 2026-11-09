@@ -4,8 +4,6 @@ Gazebo Entities MCP Server
 Manejo de entidades, modelos y sensores en Gazebo
 """
 import os
-import subprocess
-import shutil
 import tempfile
 from mcp.server.fastmcp import FastMCP
 
