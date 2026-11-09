@@ -1,4 +1,3 @@
-cat > .gitignore << 'EOF'
 .venv/
 __pycache__/
 *.pyc
@@ -13,7 +12,12 @@ claude_desktop_config.json
 *.env
 bolsa-env/
 node_modules/
-EOF
 *.bak
 *.bak.*
 *.diff
+
+# Certificados TLS y claves privadas (no deben ir al repo)
+*.key
+*.crt
+*.pem
+*.p12
