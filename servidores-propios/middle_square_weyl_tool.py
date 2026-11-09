@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from octave_runner import run_octave
+
 MIDDLE_SQUARE_WEYL_TOOL_SCHEMA: Dict[str, Any] = {
     "name": "middle_square_weyl",
     "description": (
@@ -64,12 +66,28 @@ def middle_square_weyl(
     tcr_p2: int = 9967,
     max_iter: int = 1000000,
 ) -> Dict[str, Any]:
-    from server import run_octave
+    if digits < 1:
+        raise ValueError(f"digits debe ser >= 1 (recibido: {digits})")
+    if digits % 2 != 0:
+        raise ValueError(
+            f"digits debe ser par (recibido: {digits}): el metodo middle-square "
+            "toma la mitad central de un numero de 2*digits digitos"
+        )
+    if modulus < 10 ** digits:
+        raise ValueError(
+            f"modulus ({modulus}) debe ser >= 10^digits ({10 ** digits}): "
+            "ms_next devuelve valores de 0 a 10^digits-1 y se indexan como x+1"
+        )
+    if max_iter < 1:
+        raise ValueError(f"max_iter debe ser >= 1 (recibido: {max_iter})")
 
+    fmt = f"%0{2 * digits}d"
+    mid_from = digits // 2 + 1
+    mid_to = digits // 2 + digits
     script = f"""
 function y = ms_next(x)
-  s = sprintf('%08d', mod(x^2, 10^8));
-  mid = str2double(s(3:6));
+  s = sprintf('{fmt}', mod(x^2, 10^{2 * digits}));
+  mid = str2double(s({mid_from}:{mid_to}));
   y = mid;
 end
 
@@ -104,11 +122,11 @@ zs_rel = zero_sink / {modulus};
 
 function [x, w] = weyl_next(x, w, s)
   w = mod(w + s, {modulus});
-  s8 = sprintf('%08d', mod(x^2 + w, 10^8));
-  x = str2double(s8(3:6));
+  s8 = sprintf('{fmt}', mod(x^2 + w, 10^{2 * digits}));
+  x = str2double(s8({mid_from}:{mid_to}));
 end
 
-s = {weyl_s}; w = 0; x = 1234;
+s = {weyl_s}; w = 0; x = min(1234, {modulus} - 1);
 trw = []; seenw = false(1, {modulus}); weyl_period = 0;
 for i = 1:{max_iter}
   [x, w] = weyl_next(x, w, s);
@@ -122,7 +140,7 @@ for i = 1:{max_iter}
 end
 
 M = {tcr_p1} * {tcr_p2};
-w1 = 0; w2 = 0; x = 1234;
+w1 = 0; w2 = 0; x = min(1234, {modulus} - 1);
 trcrt = []; seen_crt = false(1, {modulus}); tcr_period = 0;
 % Definir extgcd antes de usarlo
 function inv = inv_mod(a, m)
@@ -142,8 +160,8 @@ for i = 1:{max_iter}
   w2 = mod(w2 + {weyl_s}, {tcr_p2});
   k = mod((w2 - w1) * inv, {tcr_p2});
   w = mod(w1 + {tcr_p1} * k, M);
-  s8 = sprintf('%08d', mod(x^2 + w, 10^8));
-  x = str2double(s8(3:6));
+  s8 = sprintf('{fmt}', mod(x^2 + w, 10^{2 * digits}));
+  x = str2double(s8({mid_from}:{mid_to}));
   if seen_crt(x+1)
     j = find(trcrt == x, 1);
     tcr_period = i - j;

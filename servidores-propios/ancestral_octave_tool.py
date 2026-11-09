@@ -9,8 +9,9 @@ que no está disponible en todas las versiones de Octave.
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, List
+
+from octave_runner import run_octave
 
 ANCESTRAL_OCTAVE_TOOL_SCHEMA: Dict[str, Any] = {
     "name": "ancestral_octave",
@@ -530,15 +531,16 @@ def _parse_octave_output(raw: str) -> Dict[str, Any]:
 
 
 def ancestral_octave(preset: str, params: Dict = None) -> Dict[str, Any]:
-    from server import run_octave
-
     params = params or {}
     call = _build_call(preset, params)
     script = _octave_source_block() + "\n" + call + "\ndisp_struct(r);\n"
     raw = run_octave(script)
 
     # Filtrar solo las líneas de resultado (líneas que contienen '=')
-    result_lines = [l for l in raw.splitlines() if '=' in l and not l.startswith('{') and not l.startswith('}')]
+    result_lines = [
+        line for line in raw.splitlines()
+        if '=' in line and not line.startswith('{') and not line.startswith('}')
+    ]
     result_text = '\n'.join(result_lines)
     parsed = _parse_octave_output(result_text)
     if not parsed:

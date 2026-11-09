@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-import subprocess, json, sys, os
+import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.modules.setdefault("server", sys.modules["__main__"])
+from octave_runner import run_octave
 from lyapunov_tool import compute_lyapunov_exponent, LYAPUNOV_TOOL_SCHEMA
 from stiff_ode_tool import integrate_stiff_ode, STIFF_ODE_TOOL_SCHEMA
 from bifurcation_tool import compute_bifurcation_diagram, BIFURCATION_TOOL_SCHEMA
@@ -26,14 +28,6 @@ from goertzel_tool import (
 )
 from ancestral_octave_tool import ancestral_octave, ANCESTRAL_OCTAVE_TOOL_SCHEMA
 from middle_square_weyl_tool import middle_square_weyl, MIDDLE_SQUARE_WEYL_TOOL_SCHEMA
-
-
-def run_octave(code):
-    result = subprocess.run(
-        ["octave", "--no-gui", "--eval", code],
-        capture_output=True, text=True, timeout=30
-    )
-    return result.stdout + result.stderr
 
 
 TOOLS = [
@@ -65,6 +59,7 @@ for line in sys.stdin:
     line = line.strip()
     if not line:
         continue
+    req_id = None
     try:
         req = json.loads(line)
         req_id = req.get("id")
@@ -199,4 +194,4 @@ for line in sys.stdin:
         print(json.dumps(resp), flush=True)
 
     except Exception as e:
-        print(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32603, "message": str(e)}}), flush=True)
+        print(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32603, "message": str(e)}}), flush=True)
