@@ -60,7 +60,7 @@
         "FIRECRAWL_API_KEY": "TU_FIRECRAWL_API_KEY_AQUI"
       }
     },
-    "octave": {
+    "octave-chiloe": {
       "command": "python3",
       "args": [
         "/home/astrid/Documents/OpenScience/projects/githu/mcp-ecosystem-chiloe/servidores-propios/octave_mcp.py"
@@ -170,6 +170,35 @@
       "command": "python3",
       "args": [
         "/home/astrid/Documents/OpenScience/projects/githu/mcp-ecosystem-chiloe/servidores-propios/bolsa_mcp.py"
+      ]
+    },
+    "md-simulation": {
+      "command": "python3",
+      "args": [
+        "/home/astrid/Documents/OpenScience/projects/githu/mcp-ecosystem-chiloe/server.py"
+      ]
+    },
+    "bench": {
+      "command": "/bin/bash",
+      "args": [
+        "-lc",
+        "cd /home/astrid/Documents/OpenScience/sessions/2026-10-23-0117 && exec python3 mcp/bench_server.py"
+      ]
+    },
+    "mcp-blender-full": {
+      "command": "/home/astrid/mcp-blender/.venv/bin/mcp-blender",
+      "args": [
+        "--port",
+        "9877"
+      ]
+    },
+    "unrealMCP": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/home/astrid/unreal-mcp/Python",
+        "run",
+        "unreal_mcp_server.py"
       ]
     }
   }
