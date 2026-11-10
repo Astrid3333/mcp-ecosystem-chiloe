@@ -150,21 +150,37 @@ def list_jobs() -> List[Dict[str, Any]]:
 
 
 def _pid_alive(pid: Optional[int]) -> bool:
-    """Verifica si un proceso sigue vivo.
+    """Verifica si un proceso sigue vivo (un zombie cuenta como terminado).
 
     Args:
         pid: ID de proceso a comprobar.
 
     Returns:
-        True si el proceso existe, False en caso contrario o si pid es None.
+        True si el proceso existe y no es zombie, False en caso contrario
+        o si pid es None.
     """
     if pid is None:
         return False
+    # Si es hijo nuestro y ya termino, lo recogemos (evita zombies).
+    try:
+        done, _ = os.waitpid(pid, os.WNOHANG)
+        if done == pid:
+            return False
+    except ChildProcessError:
+        pass  # no es hijo nuestro (ej: el server se reinicio)
+    except OSError:
+        pass
     try:
         os.kill(pid, 0)
-        return True
     except OSError:
         return False
+    # Existe: descartar zombies (estado Z) leyendo /proc.
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
+            state = f.read().rsplit(")", 1)[1].split()[0]
+        return state != "Z"
+    except (OSError, IndexError):
+        return True
 
 
 def refresh_status(job_id: str) -> Optional[Dict[str, Any]]:
