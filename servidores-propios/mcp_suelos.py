@@ -1,7 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 import requests
 import subprocess
-import json
 import tempfile
 import os
 
@@ -14,8 +13,12 @@ USGS_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 
 
 @mcp.tool()
-def analizar_suelo(lat: float, lon: float) -> str:
-    """Analiza el suelo en coordenadas dadas (ISRIC SoilGrids + sismos USGS cercanos)."""
+def analizar_suelo(lat: float, lon: float) -> dict:
+    """Analiza el suelo en coordenadas dadas (ISRIC SoilGrids + sismos USGS cercanos).
+
+    Respuesta: dict con las claves 'suelo' (propiedades del SoilGrids en el punto) y 'sismos'
+    (eventos USGS cercanos). Cada sub-dict trae su propia clave 'error' si esa consulta falló.
+    """
     # --- Suelo (ISRIC SoilGrids) ---
     try:
         r = requests.get(
@@ -59,15 +62,23 @@ def analizar_suelo(lat: float, lon: float) -> str:
     except Exception as e:
         sismos = {"error": f"No se pudo consultar USGS: {e}"}
 
-    return json.dumps({
+    return {
         "suelo": suelo,
         "sismos": sismos,
-    }, ensure_ascii=False)
+    }
 
 
 @mcp.tool()
-def ejecutar_octave(script: str, timeout_s: int = 30) -> str:
-    """Ejecuta un script de Octave y devuelve el resultado (stdout, stderr y código de salida)."""
+def ejecutar_octave(script: str, timeout_s: int = 30) -> dict:
+    """Ejecuta un script de Octave y devuelve el resultado.
+
+    Respuesta: dict con las claves 'stdout' (salida del script), 'stderr' (salida de error),
+    'returncode' (código de salida; 0 = ok) y, si el script excede el timeout, 'error' con el
+    motivo y 'returncode' en None.
+
+    Ojo con el contrato: desde la versión corregida la respuesta es un objeto JSON con esas
+    claves, no el stdout crudo. Para el texto del script, leé la clave 'stdout'.
+    """
     fd, script_path = tempfile.mkstemp(suffix=".m", prefix="suelo_")
     with os.fdopen(fd, "w") as tf:
         tf.write(script)
@@ -77,18 +88,18 @@ def ejecutar_octave(script: str, timeout_s: int = 30) -> str:
             [octave_bin(), "--norc", script_path],
             capture_output=True, text=True, timeout=timeout_s,
         )
-        return json.dumps({
+        return {
             "stdout": result.stdout,
             "stderr": result.stderr,
             "returncode": result.returncode,
-        }, ensure_ascii=False)
+        }
     except subprocess.TimeoutExpired:
-        return json.dumps({
+        return {
             "error": f"Octave excedió el timeout de {timeout_s}s",
             "stdout": "",
             "stderr": "",
             "returncode": None,
-        }, ensure_ascii=False)
+        }
     finally:
         try:
             os.unlink(script_path)
