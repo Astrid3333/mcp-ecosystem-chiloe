@@ -27,7 +27,7 @@
       "command": "/bin/bash",
       "args": [
         "-c",
-        "/home/astrid/.local/bin/uvx --from git+https://github.com/nkarasiak/qgis-mcp qgis-mcp"
+        "/home/astrid/.local/bin/uvx --from git+https://github.com/nkarasiak/qgis-mcp qgis-mcp-server"
       ]
     },
     "gdal": {
