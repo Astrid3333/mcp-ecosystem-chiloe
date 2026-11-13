@@ -200,6 +200,12 @@
         "run",
         "unreal_mcp_server.py"
       ]
+    },
+    "material-maker": {
+      "command": "/home/astrid/Documents/OpenScience/projects/githu/mcp-ecosystem-chiloe/servidores-propios/.venv/bin/python",
+      "args": [
+        "/home/astrid/Documents/OpenScience/projects/githu/mcp-ecosystem-chiloe/servidores-propios/material_maker_mcp.py"
+      ]
     }
   }
 }
