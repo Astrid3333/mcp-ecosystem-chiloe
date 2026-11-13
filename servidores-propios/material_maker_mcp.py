@@ -141,6 +141,32 @@ def _param_schema(node: dict[str, Any]) -> list[dict[str, Any]]:
     return schema
 
 
+def _coerce_float_params(nodos: list[dict], catalog: dict[str, dict[str, Any]]) -> None:
+    """Convierte a float los parametros declarados como float que llegan como int.
+
+    El exportador de Godot escribe el valor literal en el shader: un entero produce
+    ``METALLIC = (0)*orm_tex.b`` y el compilador de Godot rechaza ``int * float``
+    ('Invalid arguments to operator'). En JSON es natural escribir ``metallic: 0``.
+    """
+    for node in nodos:
+        if not isinstance(node, dict):
+            continue
+        meta = catalog.get(node.get("type") or "")
+        if not meta:
+            continue
+        declared = {
+            p["name"]: p.get("type")
+            for p in _param_schema(meta)
+            if p.get("name")
+        }
+        params = node.get("parameters")
+        if not isinstance(params, dict):
+            continue
+        for name, value in list(params.items()):
+            if declared.get(name) == "float" and isinstance(value, int) and not isinstance(value, bool):
+                params[name] = float(value)
+
+
 def _render_env() -> dict[str, str]:
     env = dict(os.environ)
     has_gpu = any(
@@ -378,6 +404,8 @@ def crear_material(
             f"Tipos de nodo inexistentes en el catalogo: {unknown_types}. "
             f"Consulta listar_nodos para descubrir los nombres correctos."
         )
+
+    _coerce_float_params(nodos, catalog)
 
     node_names = set(names)
     for conn in conexiones:
