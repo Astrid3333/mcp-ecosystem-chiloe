@@ -361,6 +361,12 @@ def crear_material(
         raise MaterialMakerError("'nodos' no puede estar vacio: un material necesita al menos un nodo.")
 
     catalog = _node_catalog()
+    malformed = [n for n in nodos if not isinstance(n, dict) or "type" not in n]
+    if malformed:
+        raise MaterialMakerError(
+            "Formato de nodo invalido: cada elemento de 'nodos' debe ser un dict con las claves "
+            f"'name', 'type' y 'parameters' (formato .ptex). Recibido: {malformed[0]!r}"
+        )
     names = [n.get("name") for n in nodos]
     duplicates = {n for n in names if names.count(n) > 1}
     if duplicates:
@@ -527,6 +533,18 @@ def render_material(
     size = int(tamano)
     if size < 16 or size > 8192:
         raise MaterialMakerError("'tamano' debe estar entre 16 y 8192.")
+
+    try:
+        graph = json.loads(src.read_text())
+    except json.JSONDecodeError as exc:
+        raise MaterialMakerError(f"El archivo '{src.name}' no es un .ptex valido: {exc}") from exc
+    node_types = {n.get("type") for n in graph.get("nodes", [])}
+    if "material" not in node_types:
+        raise MaterialMakerError(
+            f"El grafo '{src.name}' no contiene un nodo de tipo 'material' (el nodo que recibe los mapas "
+            "PBR), por eso el export no produce ningun archivo. Usa plantilla_material o conecta un nodo "
+            "'Material' a tu grafo. Tipos presentes: " + (", ".join(sorted(t for t in node_types if t)) or "ninguno")
+        )
 
     out_dir = Path(salida).expanduser() if salida else WORKSPACE / "render" / src.stem
     out_dir.mkdir(parents=True, exist_ok=True)
