@@ -14,6 +14,7 @@ bolsa-env/
 node_modules/
 *.bak
 *.bak.*
+*.bak-*
 *.diff
 
 # Certificados TLS y claves privadas (no deben ir al repo)
