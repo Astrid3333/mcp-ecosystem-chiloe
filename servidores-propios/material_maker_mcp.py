@@ -141,6 +141,76 @@ def _param_schema(node: dict[str, Any]) -> list[dict[str, Any]]:
     return schema
 
 
+def _normalize_param_value(value: Any) -> Any:
+    """Deshace la normalizacion que aplican algunos clientes MCP a los argumentos.
+
+    Se observaron dos formas al invocar desde un cliente que valida contra el JSON Schema:
+    - los arrays envueltos como ``{"item": [...]}``;
+    - los numeros enviados como cadenas (``"0.85"``).
+
+    Ambos llegan intactos al servidor y el exportador los vuelca literales al shader, donde
+    ``"0.85"`` o un array envuelto producen un material invalido.
+    """
+    if isinstance(value, dict):
+        if set(value.keys()) == {"item"}:
+            return _normalize_param_value(value["item"])
+        return {k: _normalize_param_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_normalize_param_value(v) for v in value]
+    if isinstance(value, str):
+        text = value.strip()
+        if text:
+            try:
+                return float(text) if ("." in text or "e" in text.lower()) else int(text)
+            except ValueError:
+                return value
+    return value
+
+
+def _normalize_gradient_points(points: list[dict] | None) -> list[dict]:
+    """Normaliza los puntos de gradiente al formato nativo del nodo colorize.
+
+    Acepta el formato nativo ``{"r","g","b","a","pos"}`` y el alias habitual
+    ``{"color": [r,g,b,a], "position": p}``.
+    """
+    normalized: list[dict] = []
+    for point in points or []:
+        if not isinstance(point, dict):
+            raise MaterialMakerError(f"Punto de gradiente invalido: {point!r}")
+        point = {k: _normalize_param_value(v) for k, v in point.items()}
+        if any(k in point for k in ("r", "g", "b")):
+            normalized.append(
+                {
+                    "r": float(point.get("r", 0.0)),
+                    "g": float(point.get("g", 0.0)),
+                    "b": float(point.get("b", 0.0)),
+                    "a": float(point.get("a", 1.0)),
+                    "pos": float(point.get("pos", point.get("position", 0.0))),
+                }
+            )
+            continue
+        color = point.get("color")
+        if isinstance(color, dict):
+            color = color.get("item", color)
+        if not isinstance(color, (list, tuple)):
+            raise MaterialMakerError(
+                f"Punto de gradiente sin color valido: {point!r}. "
+                "Usa {'r','g','b','a','pos'} o {'color': [r,g,b,a], 'position': p}."
+            )
+        values = [float(v) for v in color]
+        values += [1.0] * (4 - len(values))
+        normalized.append(
+            {
+                "r": values[0],
+                "g": values[1],
+                "b": values[2],
+                "a": values[3],
+                "pos": float(point.get("position", point.get("pos", 0.0))),
+            }
+        )
+    return normalized
+
+
 def _coerce_float_params(nodos: list[dict], catalog: dict[str, dict[str, Any]]) -> None:
     """Convierte a float los parametros declarados como float que llegan como int.
 
@@ -405,6 +475,11 @@ def crear_material(
             f"Consulta listar_nodos para descubrir los nombres correctos."
         )
 
+    for node in nodos:
+        if isinstance(node, dict) and isinstance(node.get("parameters"), dict):
+            node["parameters"] = {
+                k: _normalize_param_value(v) for k, v in node["parameters"].items()
+            }
     _coerce_float_params(nodos, catalog)
 
     node_names = set(names)
@@ -498,13 +573,16 @@ def plantilla_material(
             {"a": 1, "b": 0, "g": 0, "pos": 0, "r": 0},
             {"a": 1, "b": 1, "g": 1, "pos": 1, "r": 1},
         ]
+    puntos_gradiente = _normalize_gradient_points(gradiente)
 
     nodos: list[dict] = [
         {"name": nodo_base, "type": nodo_base, "parameters": parametros_base or {}},
         {
             "name": "colorize",
             "type": "colorize",
-            "parameters": {"gradient": {"points": gradiente, "interpolation": 1, "type": "Gradient"}},
+            "parameters": {
+                "gradient": {"points": puntos_gradiente, "interpolation": 1, "type": "Gradient"}
+            },
         },
         {"name": "Material", "type": "material", "parameters": parametros_material or {}},
     ]
