@@ -167,6 +167,35 @@ def _normalize_param_value(value: Any) -> Any:
     return value
 
 
+def _coerce_port(side: str, value: Any) -> int:
+    """Convierte un indice de puerto a entero tolerando la forma normalizada por el cliente.
+
+    El cliente opencode entrega los enteros como cadenas (``"0"``), igual que hace con los
+    parametros numericos de los nodos; el servidor debe aceptar ambas formas.
+    """
+    if isinstance(value, bool):
+        raise MaterialMakerError(f"'{side}' debe ser un entero, recibio {value!r}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value.is_integer():
+            return int(value)
+        raise MaterialMakerError(f"'{side}' debe ser un entero, recibio {value!r}")
+    if isinstance(value, str):
+        text = value.strip()
+        try:
+            return int(text)
+        except ValueError:
+            pass
+        try:
+            number = float(text)
+        except ValueError:
+            number = None
+        if number is not None and number.is_integer():
+            return int(number)
+    raise MaterialMakerError(f"'{side}' debe ser un entero, recibio {value!r}")
+
+
 def _normalize_gradient_points(points: list[dict] | None) -> list[dict]:
     """Normaliza los puntos de gradiente al formato nativo del nodo colorize.
 
@@ -456,6 +485,13 @@ def crear_material(
     if not nodos:
         raise MaterialMakerError("'nodos' no puede estar vacio: un material necesita al menos un nodo.")
 
+    nodos = _normalize_param_value(nodos)
+    conexiones = _normalize_param_value(conexiones)
+    if parametros:
+        parametros = _normalize_param_value(parametros)
+    if not nodos:
+        raise MaterialMakerError("'nodos' no puede estar vacio: un material necesita al menos un nodo.")
+
     catalog = _node_catalog()
     malformed = [n for n in nodos if not isinstance(n, dict) or "type" not in n]
     if malformed:
@@ -491,8 +527,7 @@ def crear_material(
                     f"Conexion invalida: {side}='{ref}' no corresponde a ningun nodo del grafo."
                 )
         for side in ("from_port", "to_port"):
-            if not isinstance(conn.get(side), int):
-                raise MaterialMakerError(f"'{side}' debe ser un entero, recibio {conn.get(side)!r}")
+            conn[side] = _coerce_port(side, conn.get(side))
 
     data = {
         "connections": [
