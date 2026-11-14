@@ -60,6 +60,12 @@
         "FIRECRAWL_API_KEY": "TU_FIRECRAWL_API_KEY_AQUI"
       }
     },
+    "octave": {
+      "command": "/home/astrid/octave-mcp/.venv/bin/python",
+      "args": [
+        "/home/astrid/octave-mcp/server.py"
+      ]
+    },
     "octave-chiloe": {
       "command": "python3",
       "args": [
